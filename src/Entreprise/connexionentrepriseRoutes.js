@@ -62,8 +62,8 @@ router.post('/login', async (req, res) => {
 
     // Génération du token JWT
     const token = jwt.sign(
-      { id: entreprise.id, email: entreprise.email },
-      process.env.JWT_SECRET || 'votre_secret_jwt_ici',
+      { id: entreprise.id, email: entreprise.email, role: 'entreprise' },
+      process.env.JWT_SECRET || 'stagetrack_secret_key_2024',
       { expiresIn: '24h' }
     );
 

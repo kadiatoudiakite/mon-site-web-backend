@@ -1,45 +1,75 @@
 // server.js
 require('dotenv').config();
 const express = require('express');
+const cors = require('cors');
 const pool = require('./config/db');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Middleware pour lire le JSON dans les requêtes
-app.use(express.json());
+// Middleware
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
+app.use(cors({ origin: true, credentials: true }));
+app.use('/uploads', express.static('uploads'));
+app.set('dbPool', pool);
+
+// ==================== ROUTES UNIVERSITÉ ====================
+// On regroupe tout sous /api/universites pour éviter les 404
+const univAuth = require('./src/Universite/connexion_universite');
+const univPub = require('./src/Universite/publication_universite');
+const univSup = require('./src/Universite/supervisionUniversite');
+
+app.use('/api/entreprises', require('./src/Universite/creation_entreprise'));
+app.use('/api/universites', univAuth); // Login, Profil, Domaines
+app.use('/api/universites', univPub);  // CRUD Offres (supporte / et /publication_universite)
+app.use('/api/universites/supervision', univSup); // Stats, Vue globale
+app.use('/api/universites/analyse', require('./src/Universite/analyse_universite')); // Nouveau module d'analyse
+app.use('/api/universites/etudiants/analyse', require('./src/Universite/analyse_etudiant')); // Analyse détaillée étudiants
+app.use('/api/admin', require('./src/Universite/creation_admin'));
+
+// ==================== ROUTES ENTREPRISE ====================
+app.use('/api/entreprises/auth', require('./src/Entreprise/connexionentrepriseRoutes'));
+app.use('/api/connexion', require('./src/Entreprise/connexionentrepriseRoutes')); // Alias pour compatibilité
+app.use('/api/entreprises/profil', require('./src/Entreprise/profilentreprise.js'));
+app.use('/api/profil-entreprise', require('./src/Entreprise/profilentreprise.js')); // Alias pour compatibilité
+app.use('/api/entreprises/offres', require('./src/Entreprise/publicationstageRoute'));
+app.use('/api/publications', require('./src/Entreprise/publicationstageRoute')); // Alias pour compatibilité
+app.use('/api/entreprises/candidatures', require('./src/Entreprise/gestionCandidatures'));
+// ==================== ROUTES MESSAGERIE ====================
+app.use('/api/messagerie', require('./src/Universite/messagerie'));
+// ==================== ROUTES ÉTUDIANT ====================
+app.use('/api/etudiants', require('./src/Etudiant/connexion'));
+app.use('/api/etudiants/offres', require('./src/Etudiant/offre'));
+app.use('/api/etudiants/entreprises', require('./src/Etudiant/entreprise'));
+app.use('/api/etudiants/stages', require('./src/Etudiant/mes_stage'));
+app.use('/api/etudiants/docs', require('./src/Etudiant/docs'));
+app.use('/api/etudiants/profil', require('./src/Etudiant/profil'));
+app.use('/api/etudiants/status', require('./src/Etudiant/status'));
 
 // Route racine de test
 app.get('/', (req, res) => {
-  res.json({ 
-    message: 'Serveur Express démarré !',
-    database: 'db_stagetrack'
+  res.json({ message: 'Serveur StageTrack démarré !', status: 'OK' });
+});
+
+// Middleware de gestion des erreurs pour toujours renvoyer du JSON
+app.use((err, req, res, next) => {
+  console.error('💥 ERREUR SERVEUR:', err.stack);
+  res.status(500).json({
+    success: false,
+    message: 'Une erreur interne est survenue sur le serveur',
+    error: process.env.NODE_ENV === 'development' ? err.message : undefined
   });
 });
 
-// Route de test connexion DB
-app.get('/test-db', async (req, res) => {
-  try {
-    const [rows] = await pool.query('SELECT 1 + 1 AS resultat');
-    res.json({ 
-      success: true, 
-      message: 'Connexion DB OK', 
-      test: rows[0] 
-    });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ 
-      success: false, 
-      error: err.message 
-    });
-  }
+// Gestion 404 en JSON
+app.use((req, res) => {
+  res.status(404).json({
+    success: false,
+    message: `Route non trouvée : ${req.method} ${req.url}`
+  });
 });
 
-// (Ajoute tes autres routes ici plus tard)
-
 app.listen(PORT, () => {
-  console.log(`Serveur lancé → http://localhost:${PORT}`);
-  console.log('Teste ces URLs :');
-  console.log(`  → http://localhost:${PORT}/`);
-  console.log(`  → http://localhost:${PORT}/test-db`);
+  console.log(`🚀 Serveur démarré sur http://localhost:${PORT}`);
 });
