@@ -1,6 +1,5 @@
 // src/Universite/entrepriseRoutes.js
 const express = require('express');
-const jwt = require('jsonwebtoken');
 const router = express.Router();
 const { verifyToken } = require('../middlewares/auth');
 
@@ -12,84 +11,113 @@ const getDbPool = (req) => req.app.get('dbPool');
 // ====================== CRÉER UNE NOUVELLE ENTREPRISE ======================
 router.post('/', verifyToken, async (req, res) => {
   const { nom, email, domaine_id } = req.body;
-  const id_universite = req.user.id; // Récupération automatique de l'université connectée
+  const id_universite = req.user.id;
 
-  console.log('🏢 [ENTREPRISE] Création d\'une nouvelle entreprise');
-  console.log('   Nom:', nom);
-  console.log('   Email:', email);
-  console.log('   Domaine ID:', domaine_id);
-  console.log('   Université ID:', id_universite);
+  console.log('🏢 Tentative de création entreprise par université ID:', id_universite);
 
   // Validation
   if (!nom || !email || !domaine_id) {
-    console.warn('⚠️ [ENTREPRISE] Champs manquants');
     return res.status(400).json({
       success: false,
-      message: 'Les champs nom, email et domaine_id sont obligatoires'
+      message: 'Nom, email et domaine sont obligatoires'
     });
   }
 
   try {
     const pool = getDbPool(req);
 
-    // Vérifier si l'email ou le nom existe déjà
-    console.log('🔍 [ENTREPRISE] Vérification des doublons...');
+    // ====================== VÉRIFICATION DU DOMAINE ======================
+    const [domaineCheck] = await pool.execute('SELECT id FROM domaine WHERE id = ?', [domaine_id]);
+    if (domaineCheck.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Domaine invalide'
+      });
+    }
+
+    // ====================== VÉRIFICATION DOUBLONS ======================
     const [existing] = await pool.execute(
       'SELECT id FROM entreprise WHERE email = ? OR nom = ?',
-      [email.toLowerCase(), nom]
+      [email.toLowerCase().trim(), nom.trim()]
     );
 
     if (existing.length > 0) {
-      console.warn('⚠️ [ENTREPRISE] Entreprise déjà existante');
       return res.status(409).json({
         success: false,
-        message: 'Une entreprise avec ce nom ou cet email existe déjà'
+        message: 'Cette entreprise existe déjà (nom ou email)'
       });
     }
 
     // ====================== GÉNÉRATION AUTOMATIQUE DU MOT DE PASSE ======================
     const generatePassword = (length = 12) => {
-      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789@#';
       let password = '';
+
       for (let i = 0; i < length; i++) {
         password += chars.charAt(Math.floor(Math.random() * chars.length));
       }
+
       return password;
     };
 
     const plainPassword = generatePassword(12);
-    console.log('🔑 [ENTREPRISE] Mot de passe généré automatiquement :', plainPassword);
+
+    console.log('🔑 Mot de passe généré :', plainPassword);
 
     // ====================== INSERTION EN BASE ======================
-    console.log('💾 [ENTREPRISE] Insertion en base de données...');
-    
     const [result] = await pool.execute(
-      `INSERT INTO entreprise (nom, email, mot_de_passe, domaine_id, id_universite)
-       VALUES (?, ?, ?, ?, ?)`,
-      [nom, email.toLowerCase(), plainPassword, domaine_id, id_universite]
+      `INSERT INTO entreprise 
+      (nom, email, mot_de_passe, domaine_id, id_universite, created_at)
+      VALUES (?, ?, ?, ?, ?, NOW())`,
+      [
+        nom.trim(),
+        email.toLowerCase().trim(),
+        plainPassword,
+        parseInt(domaine_id),
+        id_universite
+      ]
     );
 
-    console.log('✅ [ENTREPRISE] Entreprise créée avec succès - ID:', result.insertId);
+    console.log('✅ Entreprise créée avec succès ! ID =', result.insertId);
 
-    // Réponse avec le mot de passe en clair
+    // ====================== VÉRIFICATION DE LA CRÉATION ======================
+    const [verification] = await pool.execute(
+      'SELECT id, nom, email, domaine_id, id_universite, created_at FROM entreprise WHERE id = ?',
+      [result.insertId]
+    );
+
+    if (verification.length === 0) {
+      console.error('💥 VÉRIFICATION ÉCHOUÉE: Entreprise non trouvée après création');
+      return res.status(500).json({
+        success: false,
+        message: 'Erreur de vérification: entreprise créée mais non retrouvée'
+      });
+    }
+
+    const entrepriseCreee = verification[0];
+    console.log('✅ VÉRIFICATION RÉUSSIE: Entreprise confirmée en base:', entrepriseCreee);
+
+    // ====================== RÉPONSE ======================
     res.status(201).json({
       success: true,
-      message: 'Entreprise créée avec succès',
+      message: 'Entreprise créée avec succès et vérifiée en base de données',
       entreprise: {
-        id: result.insertId,
-        nom,
-        email: email.toLowerCase(),
-        mot_de_passe: plainPassword,     // Mot de passe visible
-        domaine_id: parseInt(domaine_id),
-        id_universite: id_universite     // ID université enregistré
+        id: entrepriseCreee.id,
+        nom: entrepriseCreee.nom,
+        email: entrepriseCreee.email,
+        mot_de_passe: plainPassword,
+        domaine_id: entrepriseCreee.domaine_id,
+        id_universite: entrepriseCreee.id_universite,
+        created_at: entrepriseCreee.created_at
       }
     });
 
   } catch (error) {
-    console.error('💥 [ENTREPRISE] Erreur création entreprise:', error.message);
+    console.error('💥 Erreur création entreprise:', error);
+
     res.status(500).json({
       success: false,
-      message: 'Erreur serveur lors de la création de l\'entreprise'
+      message: 'Erreur serveur lors de la création de l’entreprise'
     });
   }
 });
@@ -161,8 +189,6 @@ router.get('/domaines/all', async (req, res) => {
 router.get('/:id', async (req, res) => {
   const { id } = req.params;
 
-  console.log('🔍 [ENTREPRISE] Récupération entreprise ID:', id);
-
   try {
     const pool = getDbPool(req);
     const [rows] = await pool.execute(`
@@ -186,14 +212,12 @@ router.get('/:id', async (req, res) => {
     `, [id]);
 
     if (rows.length === 0) {
-      console.warn('⚠️ [ENTREPRISE] Entreprise non trouvée - ID:', id);
       return res.status(404).json({
         success: false,
         message: 'Entreprise non trouvée'
       });
     }
 
-    console.log('✅ [ENTREPRISE] Entreprise trouvée:', rows[0].nom);
     res.status(200).json({
       success: true,
       data: rows[0]
@@ -215,8 +239,6 @@ router.put('/:id', async (req, res) => {
     email, description, domaine_id, id_universite
   } = req.body;
 
-  console.log('✏️ [ENTREPRISE] Mise à jour entreprise ID:', id);
-
   try {
     const pool = getDbPool(req);
 
@@ -235,7 +257,6 @@ router.put('/:id', async (req, res) => {
       WHERE id = ?
     `, [nom, sigle, logo, commune, quartier, telephone, email, description, domaine_id, id_universite, id]);
 
-    console.log('✅ [ENTREPRISE] Entreprise mise à jour - ID:', id);
     res.status(200).json({
       success: true,
       message: 'Entreprise mise à jour avec succès'
@@ -254,11 +275,8 @@ router.put('/:id', async (req, res) => {
 router.delete('/:id', async (req, res) => {
   const { id } = req.params;
 
-  console.log('🗑️ [ENTREPRISE] Suppression entreprise ID:', id);
-
   try {
     const pool = getDbPool(req);
-
     const [result] = await pool.execute('DELETE FROM entreprise WHERE id = ?', [id]);
 
     if (result.affectedRows === 0) {
@@ -268,7 +286,6 @@ router.delete('/:id', async (req, res) => {
       });
     }
 
-    console.log('✅ [ENTREPRISE] Entreprise supprimée - ID:', id);
     res.status(200).json({
       success: true,
       message: 'Entreprise supprimée avec succès'
@@ -303,5 +320,4 @@ router.get('/:id/offres', async (req, res) => {
 });
 
 console.log('Router exported');
-
 module.exports = router;

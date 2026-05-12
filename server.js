@@ -26,7 +26,10 @@ app.use('/api/universites', univPub);  // CRUD Offres (supporte / et /publicatio
 app.use('/api/universites/supervision', univSup); // Stats, Vue globale
 app.use('/api/universites/analyse', require('./src/Universite/analyse_universite')); // Nouveau module d'analyse
 app.use('/api/universites/etudiants/analyse', require('./src/Universite/analyse_etudiant')); // Analyse détaillée étudiants
+app.use('/api/universites/partenariat', require('./src/Universite/partenariat')); // Gestion des partenariats
+app.use('/api/universites/candidatures', require('./src/Universite/candidature')); // Gestion des candidatures
 app.use('/api/admin', require('./src/Universite/creation_admin'));
+
 
 // ==================== ROUTES ENTREPRISE ====================
 app.use('/api/entreprises/auth', require('./src/Entreprise/connexionentrepriseRoutes'));
@@ -36,8 +39,10 @@ app.use('/api/profil-entreprise', require('./src/Entreprise/profilentreprise.js'
 app.use('/api/entreprises/offres', require('./src/Entreprise/publicationstageRoute'));
 app.use('/api/publications', require('./src/Entreprise/publicationstageRoute')); // Alias pour compatibilité
 app.use('/api/entreprises/candidatures', require('./src/Entreprise/gestionCandidatures'));
-// ==================== ROUTES MESSAGERIE ====================
+// ==================== ROUTES MESSAGERIE & NOTIFICATIONS ====================
 app.use('/api/messagerie', require('./src/Universite/messagerie'));
+app.use('/api/notifications', require('./src/Entreprise/notificationentreprise'));
+app.use('/api/universites/notifications', require('./src/Universite/NotificationUniversite'));
 // ==================== ROUTES ÉTUDIANT ====================
 app.use('/api/etudiants', require('./src/Etudiant/connexion'));
 app.use('/api/etudiants/offres', require('./src/Etudiant/offre'));

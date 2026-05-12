@@ -7,22 +7,8 @@ const jwt = require('jsonwebtoken');
 const pool = require('../../config/db');
 
 // Middleware d'authentification JWT
-const authenticateToken = (req, res, next) => {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
+const { verifyToken: authenticateToken } = require('../middlewares/auth');
 
-  if (!token) {
-    return res.status(401).json({ success: false, message: 'Token manquant' });
-  }
-
-  jwt.verify(token, process.env.JWT_SECRET || 'stagetrack_secret_key_2024', (err, user) => {
-    if (err) {
-      return res.status(403).json({ success: false, message: 'Token invalide' });
-    }
-    req.user = user;
-    next();
-  });
-};
 
 // Storage configuration for multer (uploads folder)
 const storage = multer.diskStorage({

@@ -87,7 +87,8 @@ router.get('/verify', async (req, res) => {
       });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'stagetrack_secret_key_2024');
+
 
     // Récupérer les données à jour de l'étudiant
     const [rows] = await pool.query(

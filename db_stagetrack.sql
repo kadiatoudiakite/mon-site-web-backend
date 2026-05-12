@@ -430,6 +430,26 @@ INSERT INTO `universite` (`id`, `nom`, `prenom`, `telephone`, `email`, `mot_de_p
 (3, 'Test University', '', NULL, 'test@university.com', 'password123', '2026-04-19 16:45:01', 'university_admin', NULL),
 (4, 'Super Admin', 'Admin', NULL, 'superadmin@example.com', 'Admin123', '2026-04-30 16:02:09', 'super_admin', NULL);
 
+-- --------------------------------------------------------
+
+--
+-- Structure de la table `demande_partenariat`
+--
+
+DROP TABLE IF EXISTS `demande_partenariat`;
+CREATE TABLE IF NOT EXISTS `demande_partenariat` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `nom_entreprise` varchar(255) NOT NULL,
+  `email_entreprise` varchar(255) NOT NULL,
+  `domaine` varchar(100) DEFAULT NULL,
+  `description` text,
+  `id_universite` int NOT NULL,
+  `statut` enum('En attente','Acceptée','Refusée') DEFAULT 'En attente',
+  `date_demande` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `id_universite` (`id_universite`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
 --
 -- Contraintes pour les tables déchargées
 --
@@ -487,6 +507,12 @@ ALTER TABLE `filiere`
 --
 ALTER TABLE `message`
   ADD CONSTRAINT `message_ibfk_1` FOREIGN KEY (`conversation_id`) REFERENCES `conversation` (`id`) ON DELETE CASCADE;
+
+--
+-- Contraintes pour la table `demande_partenariat`
+--
+ALTER TABLE `demande_partenariat`
+  ADD CONSTRAINT `demande_partenariat_ibfk_1` FOREIGN KEY (`id_universite`) REFERENCES `universite` (`id`) ON DELETE CASCADE;
 
 --
 -- Contraintes pour la table `offre_stage`

@@ -109,4 +109,41 @@ router.get('/globale', authenticateToken, async (req, res) => {
   }
 });
 
+// Nouvelle route pour récupérer toutes les candidatures avec détails
+router.get('/candidatures-globales', authenticateToken, async (req, res) => {
+  try {
+    const [rows] = await pool.query(`
+      SELECT 
+        c.id,
+        c.date_candidature,
+        c.statut,
+        c.cv_fichier,
+        c.lettre_motivation,
+        CONCAT(e.nom, ' ', e.prenom) as nom,
+        e.email as email,
+        e.id as etudiant_id,
+        f.nom as filiere,
+        o.titre as poste,
+        d.nom as domaine_nom,
+        COALESCE(ent.nom, 'Université (Interne)') as entreprise_nom,
+        ent.id as entreprise_id
+      FROM candidature c
+      JOIN etudiant e ON c.id_etudiant = e.id
+      JOIN offre_stage o ON c.id_offre_stage = o.id
+      LEFT JOIN filiere f ON e.id_filiere = f.id
+      LEFT JOIN domaine d ON o.id_domaine = d.id
+      LEFT JOIN entreprise ent ON o.id_entreprise = ent.id
+      ORDER BY c.date_candidature DESC
+    `);
+
+    res.json({
+      success: true,
+      data: rows
+    });
+  } catch (error) {
+    console.error('💥 Erreur récupération candidatures globales:', error.message);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 module.exports = router;

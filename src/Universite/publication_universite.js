@@ -12,22 +12,8 @@ console.log('Universite Publication Stage routes loaded');
 const getDbPool = (req) => req.app.get('dbPool');
 
 // Middleware d'authentification JWT
-const authenticateToken = (req, res, next) => {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
+const { verifyToken: authenticateToken } = require('../middlewares/auth');
 
-  if (!token) {
-    return res.status(401).json({ success: false, message: 'Token manquant' });
-  }
-
-  jwt.verify(token, process.env.JWT_SECRET || 'stagetrack_secret_key_2024', (err, user) => {
-    if (err) {
-      return res.status(403).json({ success: false, message: 'Token invalide' });
-    }
-    req.user = user;
-    next();
-  });
-};
 
 // Configuration multer pour l'upload de fichiers
 const storage = multer.diskStorage({
@@ -75,7 +61,8 @@ router.get('/', async (req, res) => {
     if (token) {
       // tenter de vérifier le token
       try {
-        const user = jwt.verify(token, process.env.JWT_SECRET || 'votre_secret_jwt_ici');
+        const user = jwt.verify(token, process.env.JWT_SECRET || 'stagetrack_secret_key_2024');
+
         req.user = user;
         console.log('📋 [PUBLICATION UNIVERSITE] Requête authentifiée, universite ID:', user.id);
         const [offres] = await pool.execute(`
@@ -274,6 +261,54 @@ router.delete('/:id', authenticateToken, async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Erreur serveur lors de la suppression de l\'offre'
+    });
+  }
+});
+
+// ====================== RÉCUPÉRER LES STATISTIQUES D'UNE OFFRE ======================
+router.get('/:id/stats', async (req, res) => {
+  const { id } = req.params;
+
+  console.log('📊 [PUBLICATION UNIVERSITE] Récupération statistiques offre ID:', id);
+
+  try {
+    const pool = getDbPool(req);
+
+    // Vérifier que l'offre existe
+    const [offre] = await pool.execute(
+      'SELECT id FROM offre_stage WHERE id = ?',
+      [id]
+    );
+
+    if (offre.length === 0) {
+      return res.status(404).json({ success: false, message: 'Offre non trouvée' });
+    }
+
+    // Récupérer le nombre de likes
+    const [likes] = await pool.execute(
+      'SELECT COUNT(*) as count FROM aime WHERE id_offre_stage = ?',
+      [id]
+    );
+
+    // Récupérer le nombre de commentaires
+    const [comments] = await pool.execute(
+      'SELECT COUNT(*) as count FROM commentaire WHERE id_offre_stage = ?',
+      [id]
+    );
+
+    console.log('✅ [PUBLICATION UNIVERSITE] Stats récupérées - Likes:', likes[0].count, 'Commentaires:', comments[0].count);
+    res.status(200).json({
+      success: true,
+      data: {
+        likes: likes[0].count || 0,
+        comments: comments[0].count || 0
+      }
+    });
+  } catch (error) {
+    console.error('💥 [PUBLICATION UNIVERSITE] Erreur récupération stats:', error.message);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur serveur lors de la récupération des statistiques'
     });
   }
 });

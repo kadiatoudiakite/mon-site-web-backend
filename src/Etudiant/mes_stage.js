@@ -59,6 +59,34 @@ router.post('/postuler', upload.fields([
       [id_etudiant, id_offre_stage, cv_fichier, lettre_motivation_fichier || lettre_motivation_texte]
     );
 
+    // 3. Notification pour le créateur de l'offre
+    try {
+      const [details] = await pool.query(`
+        SELECT 
+          CONCAT(e.nom, ' ', e.prenom) as student_name,
+          o.titre as job_title,
+          o.id_entreprise,
+          o.id_universite
+        FROM etudiant e, offre_stage o
+        WHERE e.id = ? AND o.id = ?
+      `, [id_etudiant, id_offre_stage]);
+
+      if (details.length > 0) {
+        const { student_name, job_title, id_entreprise, id_universite } = details[0];
+        const notificationModule = require('../Entreprise/notificationentreprise');
+        
+        await notificationModule.createNotification({
+          id_entreprise: id_entreprise,
+          id_universite: id_universite,
+          titre: 'Nouvelle candidature reçue',
+          message: `${student_name} a postulé pour le poste : ${job_title}`,
+          type: 'candidature'
+        });
+      }
+    } catch (notifError) {
+      console.error('Erreur notification candidature:', notifError);
+    }
+
     res.json({ 
       success: true, 
       message: "Votre candidature a été envoyée avec succès !" 
