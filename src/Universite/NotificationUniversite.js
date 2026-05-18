@@ -22,7 +22,12 @@ router.get('/', verifyToken, async (req, res) => {
     const universiteId = req.user.id;
     try {
         const [rows] = await pool.query(
-            'SELECT * FROM notification WHERE id_universite = ? ORDER BY created_at DESC',
+            `SELECT n.*, e.nom AS entreprise_nom, CONCAT(et.nom, ' ', et.prenom) AS etudiant_nom
+             FROM notification n
+             LEFT JOIN entreprise e ON n.id_entreprise = e.id
+             LEFT JOIN etudiant et ON n.id_etudiant = et.id
+             WHERE n.id_universite = ?
+             ORDER BY n.created_at DESC`,
             [universiteId]
         );
         res.json({ success: true, data: rows });
@@ -47,6 +52,20 @@ router.put('/marquer-lu/:id', verifyToken, async (req, res) => {
         }
         
         res.json({ success: true, message: 'Marquée comme lue' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// ==================== MARQUER TOUTES COMME LUES ====================
+router.put('/marquer-tout-lu', verifyToken, async (req, res) => {
+    const universiteId = req.user.id;
+    try {
+        await pool.query(
+            `UPDATE notification SET statut = 'lu' WHERE id_universite = ? AND statut = 'non_lu'`,
+            [universiteId]
+        );
+        res.json({ success: true, message: 'Toutes les notifications ont été marquées comme lues' });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }

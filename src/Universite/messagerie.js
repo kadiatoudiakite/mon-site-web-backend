@@ -100,6 +100,46 @@ router.post('/message', authenticateToken, async (req, res) => {
        VALUES (?, ?, ?, NULL, 0)`, [conversation_id, expediteur_type, contenu]
     );
     const [msgRows] = await pool.query('SELECT * FROM message WHERE id = ?', [result.insertId]);
+
+    // Notification pour le destinataire du message
+    try {
+      const [conv] = await pool.query(
+        'SELECT id_entreprise, id_universite FROM conversation WHERE id = ?',
+        [conversation_id]
+      );
+
+      if (conv.length > 0) {
+        const { createNotification } = require('../Entreprise/notificationentreprise');
+        const userId = req.user.id;
+
+        if (expediteur_type === 'UNIVERSITE') {
+          // L'université envoie → notifier l'entreprise
+          const [univInfo] = await pool.query('SELECT nom FROM universite WHERE id = ?', [userId]);
+          const senderName = univInfo.length > 0 ? univInfo[0].nom : 'Une université';
+          await createNotification({
+            id_entreprise: conv[0].id_entreprise,
+            id_universite: conv[0].id_universite,
+            titre: 'Nouveau message reçu',
+            message: `${senderName} vous a envoyé un message : "${contenu.substring(0, 80)}${contenu.length > 80 ? '...' : ''}"`,
+            type: 'message'
+          });
+        } else {
+          // L'entreprise envoie → notifier l'université
+          const [entInfo] = await pool.query('SELECT nom FROM entreprise WHERE id = ?', [userId]);
+          const senderName = entInfo.length > 0 ? entInfo[0].nom : 'Une entreprise';
+          await createNotification({
+            id_universite: conv[0].id_universite,
+            id_entreprise: conv[0].id_entreprise,
+            titre: 'Nouveau message reçu',
+            message: `${senderName} vous a envoyé un message : "${contenu.substring(0, 80)}${contenu.length > 80 ? '...' : ''}"`,
+            type: 'message'
+          });
+        }
+      }
+    } catch (notifError) {
+      console.error('Erreur notification message:', notifError);
+    }
+
     res.status(201).json(msgRows[0]);
   } catch (err) {
     console.error('Erreur création message', err);

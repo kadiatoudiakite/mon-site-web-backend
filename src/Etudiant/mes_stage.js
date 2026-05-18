@@ -78,6 +78,7 @@ router.post('/postuler', upload.fields([
         await notificationModule.createNotification({
           id_entreprise: id_entreprise,
           id_universite: id_universite,
+          id_etudiant: id_etudiant,
           titre: 'Nouvelle candidature reçue',
           message: `${student_name} a postulé pour le poste : ${job_title}`,
           type: 'candidature'
@@ -134,13 +135,22 @@ router.get('/actuel/:etudiantId', async (req, res) => {
   try {
     const [rows] = await pool.query(`
       SELECT 
-        s.*,
+        c.id as candidature_id,
+        c.statut,
+        c.date_candidature,
         o.titre AS offre_titre,
-        e.nom AS entreprise_nom
-      FROM stages s
-      JOIN offre_stage o ON s.offre_id = o.id
-      JOIN entreprise e ON o.id_entreprise = e.id
-      WHERE s.etudiant_id = ? AND s.statut = 'en_cours'
+        o.description AS offre_desc,
+        o.duree,
+        o.date_debut,
+        o.date_fin,
+        e.nom AS entreprise_nom,
+        u.nom AS universite_nom
+      FROM candidature c
+      JOIN offre_stage o ON c.id_offre_stage = o.id
+      LEFT JOIN entreprise e ON o.id_entreprise = e.id
+      LEFT JOIN universite u ON o.id_universite = u.id
+      WHERE c.id_etudiant = ? AND c.statut = 'Acceptée'
+      ORDER BY c.date_candidature DESC
       LIMIT 1
     `, [etudiantId]);
 

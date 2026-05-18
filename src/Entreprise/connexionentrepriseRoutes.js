@@ -64,7 +64,7 @@ router.post('/login', async (req, res) => {
     const token = jwt.sign(
       { id: entreprise.id, email: entreprise.email, role: 'entreprise' },
       process.env.JWT_SECRET || 'stagetrack_secret_key_2024',
-      { expiresIn: '24h' }
+      { expiresIn: '7d' }
     );
 
     console.log('🎉 [LOGIN ENTREPRISE] Connexion réussie -', entrepriseData.nom, `(ID: ${entrepriseData.id})`);

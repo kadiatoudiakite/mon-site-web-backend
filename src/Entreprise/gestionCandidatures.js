@@ -2,8 +2,9 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../../config/db');
 const jwt = require('jsonwebtoken');
+const { createStudentNotification } = require('../utils/notifications'); // ← Mise à jour du chemin
 
-// Middleware d'authentification JWT
+// Middleware d'authentification
 const authenticateToken = (req, res, next) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
@@ -23,34 +24,19 @@ const authenticateToken = (req, res, next) => {
 
 // ==================== GESTION DES CANDIDATURES ====================
 
-// 1. Récupérer toutes les candidatures reçues par l'entreprise (Détails enrichis + Filtrage par offre)
+// 1. Récupérer toutes les candidatures
 router.get('/recues', authenticateToken, async (req, res) => {
   const entrepriseId = req.user.id;
   const { offreId } = req.query;
 
   let query = `
     SELECT 
-      c.id AS id,
-      c.date_candidature,
-      c.statut,
-      c.lettre_motivation,
-      c.cv_fichier,
-      c.commentaire_entreprise,
-      c.date_entretien,
-      o.titre AS poste,
-
-      o.id AS offre_id,
-      e.id AS etudiant_id,
-      CONCAT(e.nom, ' ', e.prenom) AS nom,
-      e.email,
-      e.telephone,
-      e.photo,
-      e.sexe,
-      e.matricule,
-      e.commune,
-      e.quartier,
-      f.nom AS filiere,
-      n.libelle AS niveau
+      c.id, c.date_candidature, c.statut, c.lettre_motivation, c.cv_fichier,
+      c.commentaire_entreprise, c.date_entretien,
+      o.titre AS poste, o.id AS offre_id,
+      e.id AS etudiant_id, CONCAT(e.nom, ' ', e.prenom) AS nom,
+      e.email, e.telephone, e.photo, e.sexe, e.matricule, e.commune, e.quartier,
+      f.nom AS filiere, n.libelle AS niveau
     FROM candidature c
     JOIN offre_stage o ON c.id_offre_stage = o.id
     JOIN etudiant e ON c.id_etudiant = e.id
@@ -60,7 +46,6 @@ router.get('/recues', authenticateToken, async (req, res) => {
   `;
 
   const params = [entrepriseId];
-
   if (offreId) {
     query += ` AND o.id = ?`;
     params.push(offreId);
@@ -79,57 +64,89 @@ router.get('/recues', authenticateToken, async (req, res) => {
 // 2. Marquer une candidature comme "Vue"
 router.put('/marquer-vue/:id', authenticateToken, async (req, res) => {
   const { id } = req.params;
+  const entrepriseId = req.user.id;
+
   try {
-    // On ne marque "Vue" que si c'était "En attente"
-    await pool.query(
+    const [result] = await pool.query(
       "UPDATE candidature SET statut = 'Vue' WHERE id = ? AND statut = 'En attente'",
       [id]
     );
-    res.json({ success: true, message: 'Candidature consultée' });
+
+    if (result.affectedRows > 0) {
+      const [details] = await pool.query(`
+        SELECT 
+          c.id_etudiant,
+          o.titre as job_title,
+          ent.nom as entreprise_name,
+          o.id_universite
+        FROM candidature c
+        JOIN offre_stage o ON c.id_offre_stage = o.id
+        JOIN entreprise ent ON o.id_entreprise = ent.id
+        WHERE c.id = ?
+      `, [id]);
+
+      if (details.length > 0) {
+        const { id_etudiant, job_title, entreprise_name, id_universite } = details[0];
+
+        await createStudentNotification({
+          id_etudiant,
+          id_entreprise: entrepriseId,
+          id_universite,
+          titre: 'Candidature consultée',
+          message: `Votre candidature pour "${job_title}" a été vue par ${entreprise_name}.`,
+          type: 'candidature'
+        });
+      }
+    }
+
+    res.json({ success: true, message: 'Candidature marquée comme vue' });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 });
 
-// 3. Mettre à jour le statut d'une candidature (Acceptée/Refusée)
+// 3. Mettre à jour le statut + date d'entretien (la plus importante)
 router.put('/statut/:id', authenticateToken, async (req, res) => {
   const { id } = req.params;
-  const { statut, commentaire, date_entretien } = req.body; 
+  const { statut, commentaire, date_entretien } = req.body;
+  const entrepriseId = req.user.id;
 
-  // Validation des statuts autorisés par l'ENUM
   const validStatus = ['En attente', 'Vue', 'Acceptée', 'Refusée'];
   if (!validStatus.includes(statut)) {
     return res.status(400).json({ success: false, message: 'Statut invalide' });
   }
 
   try {
-    // Vérifier le statut actuel avant de modifier
-    const [rows] = await pool.query('SELECT statut FROM candidature WHERE id = ?', [id]);
-    if (rows.length === 0) {
+    // Vérification du statut actuel
+    const [current] = await pool.query('SELECT statut FROM candidature WHERE id = ?', [id]);
+    if (current.length === 0) {
       return res.status(404).json({ success: false, message: 'Candidature non trouvée' });
     }
-
-    const currentStatus = rows[0].statut;
-    if (currentStatus === 'Acceptée' || currentStatus === 'Refusée') {
+    if (['Acceptée', 'Refusée'].includes(current[0].statut)) {
       return res.status(400).json({ 
         success: false, 
-        message: 'Cette candidature a déjà été traitée et sa décision est finale.' 
+        message: 'Cette candidature a déjà une décision finale.' 
       });
     }
 
+    // Mise à jour
     const [result] = await pool.query(
-      'UPDATE candidature SET statut = ?, commentaire_entreprise = ?, date_entretien = ? WHERE id = ?',
+      `UPDATE candidature 
+       SET statut = ?, commentaire_entreprise = ?, date_entretien = ? 
+       WHERE id = ?`,
       [statut, commentaire || null, date_entretien || null, id]
     );
 
-    // Notification pour l'université
-    try {
+    if (result.affectedRows > 0) {
+      // Récupération des informations pour la notification
       const [details] = await pool.query(`
         SELECT 
+          c.id_etudiant,
           CONCAT(et.nom, ' ', et.prenom) as student_name,
           o.titre as job_title,
           ent.nom as entreprise_name,
-          o.id_universite
+          o.id_universite,
+          c.date_entretien
         FROM candidature c
         JOIN etudiant et ON c.id_etudiant = et.id
         JOIN offre_stage o ON c.id_offre_stage = o.id
@@ -138,47 +155,54 @@ router.put('/statut/:id', authenticateToken, async (req, res) => {
       `, [id]);
 
       if (details.length > 0) {
-        const { student_name, job_title, entreprise_name, id_universite } = details[0];
-        const notificationModule = require('./notificationentreprise');
-        
-        // On notifie l'université associée à l'offre (ou toutes les universités si c'est un système centralisé)
-        // Ici, on utilise o.id_universite s'il existe, sinon on peut notifier par défaut
-        await notificationModule.createNotification({
-          id_universite: id_universite || 1, // Par défaut à 1 si non spécifié
-          titre: 'Décision sur candidature',
-          message: `${entreprise_name} a marqué la candidature de ${student_name} (${job_title}) comme "${statut}".`,
+        const { id_etudiant, job_title, entreprise_name, id_universite, date_entretien: newDate } = details[0];
+
+        let titre = 'Mise à jour de candidature';
+        let message = `Votre candidature pour "${job_title}" chez ${entreprise_name} est maintenant "${statut}".`;
+
+        if (statut === 'Acceptée') {
+          titre = 'Candidature acceptée 🎉';
+          message = `Félicitations ! Votre candidature pour "${job_title}" a été acceptée par ${entreprise_name}.`;
+        } else if (statut === 'Refusée') {
+          titre = 'Candidature refusée';
+          message = `Votre candidature pour "${job_title}" a malheureusement été refusée par ${entreprise_name}.`;
+        } else if (newDate) {
+          titre = 'Entretien programmé 📅';
+          message = `Un entretien pour "${job_title}" a été programmé le ${new Date(newDate).toLocaleDateString('fr-FR')}.`;
+        }
+
+        await createStudentNotification({
+          id_etudiant,
+          id_entreprise: entrepriseId,
+          id_universite,
+          titre,
+          message,
           type: 'candidature'
         });
       }
-    } catch (notifError) {
-      console.error('Erreur notification décision:', notifError);
     }
 
-    res.json({ success: true, message: `Candidature mise à jour : ${statut}` });
-
-
+    res.json({ success: true, message: `Statut mis à jour : ${statut}` });
 
   } catch (error) {
+    console.error(error);
     res.status(500).json({ success: false, message: error.message });
   }
 });
 
-// 3. Récupérer la liste des stagiaires (candidatures acceptées)
+// 4. Liste des stagiaires
 router.get('/stagiaires', authenticateToken, async (req, res) => {
   const entrepriseId = req.user.id;
   try {
     const [rows] = await pool.query(`
       SELECT 
-        c.id AS id,
+        c.id,
         CONCAT(e.nom, ' ', e.prenom) AS nom,
         o.titre AS poste,
-        e.email,
-        e.telephone,
+        e.email, e.telephone,
         o.date_debut AS dateDebut,
         o.date_fin AS dateFin,
-        'En cours' AS statut,
-        'Tuteur non assigné' AS tuteur,
-        5.0 AS evaluation
+        'En cours' AS statut
       FROM candidature c
       JOIN offre_stage o ON c.id_offre_stage = o.id
       JOIN etudiant e ON c.id_etudiant = e.id
@@ -186,20 +210,16 @@ router.get('/stagiaires', authenticateToken, async (req, res) => {
       ORDER BY o.date_debut DESC
     `, [entrepriseId]);
 
-    res.json({
-      success: true,
-      data: rows
-    });
+    res.json({ success: true, data: rows });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 });
 
-// 4. Analyse complète pour le dashboard (Charts & Stats)
+// 5. Analyse dashboard
 router.get('/analyse', authenticateToken, async (req, res) => {
   const entrepriseId = req.user.id;
   try {
-    // 1. Statistiques globales (Total, Acceptés, En attente, Refusés)
     const [globalStats] = await pool.query(`
       SELECT 
         COUNT(*) as total,
@@ -211,36 +231,26 @@ router.get('/analyse', authenticateToken, async (req, res) => {
       WHERE o.id_entreprise = ?
     `, [entrepriseId]);
 
-    // Candidatures par mois (pour le line chart)
     const [candidaturesParMois] = await pool.query(`
-      SELECT 
-        DATE_FORMAT(c.date_candidature, '%b') as mois,
-        COUNT(*) as total
+      SELECT DATE_FORMAT(c.date_candidature, '%b') as mois, COUNT(*) as total
       FROM candidature c
       JOIN offre_stage o ON c.id_offre_stage = o.id
       WHERE o.id_entreprise = ?
       GROUP BY mois
-      ORDER BY FIELD(mois, 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec')
+      ORDER BY FIELD(mois, 'Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec')
     `, [entrepriseId]);
 
-    // Top 5 des offres les plus populaires
     const [topOffres] = await pool.query(`
-      SELECT 
-        o.titre,
-        COUNT(c.id) as total
+      SELECT o.titre, COUNT(c.id) as total
       FROM offre_stage o
       LEFT JOIN candidature c ON o.id = c.id_offre_stage
       WHERE o.id_entreprise = ?
       GROUP BY o.id
-      ORDER BY total DESC
-      LIMIT 5
+      ORDER BY total DESC LIMIT 5
     `, [entrepriseId]);
 
-    // Distribution par Domaine
     const [domaines] = await pool.query(`
-      SELECT 
-        d.nom,
-        COUNT(o.id) as total_offres
+      SELECT d.nom, COUNT(o.id) as total_offres
       FROM domaine d
       JOIN offre_stage o ON d.id = o.id_domaine
       WHERE o.id_entreprise = ?
@@ -252,12 +262,11 @@ router.get('/analyse', authenticateToken, async (req, res) => {
       data: {
         global: globalStats[0],
         evolution: candidaturesParMois,
-        topOffres: topOffres,
-        domaines: domaines
+        topOffres,
+        domaines
       }
     });
   } catch (error) {
-    console.error('💥 Erreur analyse:', error.message);
     res.status(500).json({ success: false, message: error.message });
   }
 });

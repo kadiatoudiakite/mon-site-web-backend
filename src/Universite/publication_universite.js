@@ -139,6 +139,50 @@ router.post(['/', '/publication_universite'], authenticateToken, upload.single('
     );
 
     console.log('✅ [PUBLICATION UNIVERSITE] Offre créée avec succès - ID:', result.insertId);
+
+    // Notification aux entreprises partenaires
+    try {
+      const { createNotification } = require('../Entreprise/notificationentreprise');
+      const [univInfo] = await pool.execute('SELECT nom FROM universite WHERE id = ?', [req.user.id]);
+      const univNom = univInfo.length > 0 ? univInfo[0].nom : 'Une université';
+
+      // Récupérer les entreprises partenaires (demandes acceptées)
+      const [partenaires] = await pool.execute(
+        `SELECT DISTINCT id_entreprise FROM demande_partenariat 
+         WHERE id_universite = ? AND statut = 'Acceptée' AND id_entreprise IS NOT NULL`,
+        [req.user.id]
+      );
+
+      for (const p of partenaires) {
+        await createNotification({
+          id_entreprise: p.id_entreprise,
+          id_universite: req.user.id,
+          titre: 'Nouvelle offre de stage universitaire',
+          message: `${univNom} a publié une nouvelle offre : "${titre}"`,
+          type: 'offre'
+        });
+      }
+
+      // NOTIFIER LES ÉTUDIANTS DE L'UNIVERSITÉ
+      try {
+        const { createStudentNotification } = require('../utils/notifications');
+        const [students] = await pool.execute('SELECT id FROM etudiant');
+        for (const s of students) {
+          await createStudentNotification({
+            id_etudiant: s.id,
+            id_universite: req.user.id,
+            titre: 'Nouveau stage à l\'université 💼',
+            message: `Votre université a publié un nouveau stage : "${titre}"`,
+            type: 'offre'
+          });
+        }
+      } catch (sErr) {
+        console.error('Erreur notification étudiants (univ):', sErr);
+      }
+    } catch (notifError) {
+      console.error('Erreur notification publication université:', notifError);
+    }
+
     res.status(201).json({ success: true, message: 'Offre de stage créée avec succès', data: { id: result.insertId } });
   } catch (error) {
     console.error('💥 [PUBLICATION UNIVERSITE] Erreur création offre:', error.message);
@@ -200,6 +244,32 @@ router.put('/:id', authenticateToken, upload.single('fichier'), async (req, res)
       [titre, description, duree, date_debut, date_fin, fichier, id_domaine, id, req.user.id]
     );
 
+    // Notifier les étudiants qui ont postulé à cette offre
+    try {
+      const { createNotification } = require('../Entreprise/notificationentreprise');
+      const [univInfo] = await pool.execute('SELECT nom FROM universite WHERE id = ?', [req.user.id]);
+      const univNom = univInfo.length > 0 ? univInfo[0].nom : 'Votre université';
+
+      const [etudiantsPostulants] = await pool.execute(
+        'SELECT id_etudiant FROM candidature WHERE id_offre_stage = ?',
+        [id]
+      );
+
+      for (const etudiant of etudiantsPostulants) {
+        if (etudiant.id_etudiant) {
+          await createNotification({
+            id_etudiant: etudiant.id_etudiant,
+            id_universite: req.user.id,
+            titre: 'Mise à jour d\'offre de stage',
+            message: `L'offre "${titre.trim()}" (à laquelle vous avez postulé) a été modifiée par ${univNom}.`,
+            type: 'offre'
+          });
+        }
+      }
+    } catch (notifError) {
+      console.error('Erreur notification modification offre universitaire:', notifError);
+    }
+
     console.log('✅ [PUBLICATION UNIVERSITE] Offre modifiée avec succès');
     res.status(200).json({
       success: true,
@@ -222,9 +292,9 @@ router.delete('/:id', authenticateToken, async (req, res) => {
   try {
     const pool = getDbPool(req);
 
-    // Récupérer le fichier avant suppression
+    // Récupérer le fichier et les infos avant suppression
     const [offre] = await pool.execute(
-      'SELECT fichier FROM offre_stage WHERE id = ? AND id_universite = ?',
+      'SELECT fichier, titre FROM offre_stage WHERE id = ? AND id_universite = ?',
       [id, req.user.id]
     );
 
@@ -236,11 +306,40 @@ router.delete('/:id', authenticateToken, async (req, res) => {
       });
     }
 
+    const titreOffre = offre[0].titre || 'Une offre';
+
+    // Récupérer les étudiants qui ont postulé
+    const [etudiantsPostulants] = await pool.execute(
+      'SELECT id_etudiant FROM candidature WHERE id_offre_stage = ?',
+      [id]
+    );
+
     // Supprimer l'offre
     await pool.execute(
       'DELETE FROM offre_stage WHERE id = ? AND id_universite = ?',
       [id, req.user.id]
     );
+
+    // Notification aux étudiants ayant postulé
+    try {
+      const { createNotification } = require('../Entreprise/notificationentreprise');
+      const [univInfo] = await pool.execute('SELECT nom FROM universite WHERE id = ?', [req.user.id]);
+      const univNom = univInfo.length > 0 ? univInfo[0].nom : 'Votre université';
+
+      for (const etudiant of etudiantsPostulants) {
+        if (etudiant.id_etudiant) {
+          await createNotification({
+            id_etudiant: etudiant.id_etudiant,
+            id_universite: req.user.id,
+            titre: 'Offre de stage retirée',
+            message: `${univNom} a retiré l'offre : "${titreOffre}" à laquelle vous aviez postulé.`,
+            type: 'alerte'
+          });
+        }
+      }
+    } catch (notifError) {
+      console.error('Erreur notification suppression offre universitaire:', notifError);
+    }
 
     // Supprimer le fichier si existe
     if (offre[0].fichier) {

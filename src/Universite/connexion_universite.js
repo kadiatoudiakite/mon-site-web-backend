@@ -41,7 +41,7 @@ router.post('/login', async (req, res) => {
   const token = jwt.sign(
     { id: user.id, email: user.email, role: user.role },
     process.env.JWT_SECRET || 'stagetrack_secret_key_2024',
-    { expiresIn: '24h' }
+    { expiresIn: '7d' }
   );
 
   res.json({

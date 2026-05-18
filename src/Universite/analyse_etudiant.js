@@ -21,11 +21,13 @@ const authenticateToken = (req, res, next) => {
   });
 };
 
-// ==================== ANALYSES ÉTUDIANTS (MODE SYSTÈME UNIQUE) ====================
+// ==================== GESTION DES ANALYSES ÉTUDIANTS (Rattaché à l'Université) ====================
 
 router.get('/statistiques', authenticateToken, async (req, res) => {
   try {
-    // 1. Répartition par Filière (Global)
+    const universiteId = req.user.id;
+
+    // 1. Répartition par Filière (Global car les étudiants n'ont pas d'id_universite direct)
     const [filieres] = await pool.query(`
       SELECT f.nom as label, COUNT(e.id) as value
       FROM filiere f
@@ -33,7 +35,7 @@ router.get('/statistiques', authenticateToken, async (req, res) => {
       GROUP BY f.id
     `);
 
-    // 2. Répartition par Niveau (Global)
+    // 2. Répartition par Niveau (Global car les étudiants n'ont pas d'id_universite direct)
     const [niveaux] = await pool.query(`
       SELECT n.libelle as label, COUNT(e.id) as value
       FROM niveau n
@@ -41,14 +43,20 @@ router.get('/statistiques', authenticateToken, async (req, res) => {
       GROUP BY n.id
     `);
 
-    // 3. Stats Candidatures (Global)
+    // 3. Stats Candidatures (Filtre par les offres de CETTE Université + Mappage des statuts pour le frontend)
     const [candidatures] = await pool.query(`
       SELECT 
-        c.statut as label, 
+        CASE 
+          WHEN c.statut = 'Acceptée' THEN 'Accepté'
+          WHEN c.statut = 'Refusée' THEN 'Refusé'
+          ELSE c.statut
+        END as label, 
         COUNT(c.id) as value
       FROM candidature c
-      GROUP BY c.statut
-    `);
+      JOIN offre_stage o ON c.id_offre_stage = o.id
+      WHERE o.id_universite = ?
+      GROUP BY label
+    `, [universiteId]);
 
     res.json({
       success: true,
@@ -75,7 +83,7 @@ router.get('/liste-complete', authenticateToken, async (req, res) => {
         f.nom as filiere,
         n.libelle as niveau,
         (SELECT COUNT(*) FROM candidature WHERE id_etudiant = e.id) as nb_candidatures,
-        (SELECT COUNT(*) FROM candidature WHERE id_etudiant = e.id AND statut = 'Accepté') as nb_stages
+        (SELECT COUNT(*) FROM candidature WHERE id_etudiant = e.id AND statut IN ('Accepté', 'Acceptée')) as nb_stages
       FROM etudiant e
       LEFT JOIN filiere f ON e.id_filiere = f.id
       LEFT JOIN niveau n ON e.id_niveau = n.id

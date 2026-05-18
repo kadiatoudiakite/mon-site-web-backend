@@ -79,6 +79,35 @@ router.put('/marquer-vue/:id', verifyToken, async (req, res) => {
       return res.status(404).json({ success: false, message: 'Candidature non trouvée ou non autorisée' });
     }
 
+    // Notification pour l'étudiant
+    try {
+      const [details] = await pool.query(`
+        SELECT 
+          c.id_etudiant,
+          o.titre as job_title,
+          u.nom as universite_name
+        FROM candidature c
+        JOIN offre_stage o ON c.id_offre_stage = o.id
+        JOIN universite u ON o.id_universite = u.id
+        WHERE c.id = ?
+      `, [id]);
+
+      if (details.length > 0) {
+        const { id_etudiant, job_title, universite_name } = details[0];
+        const { createStudentNotification } = require('../utils/notifications');
+
+        await createStudentNotification({
+          id_etudiant: id_etudiant,
+          id_universite: universiteId,
+          titre: 'Candidature consultée',
+          message: `Votre candidature pour "${job_title}" a été vue par ${universite_name}.`,
+          type: 'candidature'
+        });
+      }
+    } catch (notifError) {
+      console.error('Erreur notification vue université:', notifError);
+    }
+
     res.json({ success: true, message: 'Candidature consultée' });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -129,6 +158,51 @@ router.put('/statut/:id', verifyToken, async (req, res) => {
     );
 
     res.json({ success: true, message: `Candidature mise à jour : ${statut}` });
+
+    // Notification pour l'entreprise propriétaire de l'offre
+    try {
+      const [details] = await pool.query(`
+        SELECT 
+          c.id_etudiant,
+          CONCAT(et.nom, ' ', et.prenom) as student_name,
+          o.titre as job_title,
+          o.id_entreprise,
+          u.nom as universite_name
+        FROM candidature c
+        JOIN etudiant et ON c.id_etudiant = et.id
+        JOIN offre_stage o ON c.id_offre_stage = o.id
+        LEFT JOIN universite u ON o.id_universite = u.id
+        WHERE c.id = ?
+      `, [id]);
+
+      if (details.length > 0) {
+        const { id_etudiant, student_name, job_title, id_entreprise, universite_name } = details[0];
+        const { createStudentNotification } = require('../utils/notifications');
+
+        if (id_entreprise) {
+          await createStudentNotification({
+            id_entreprise: id_entreprise,
+            id_universite: req.user.id,
+            id_etudiant: id_etudiant,
+            titre: 'Décision sur une candidature',
+            message: `${universite_name || 'L\'université'} a marqué la candidature de ${student_name} (${job_title}) comme "${statut}".`,
+            type: 'candidature'
+          });
+        }
+
+        // NOTIFICATION POUR L'ÉTUDIANT
+        await createStudentNotification({
+          id_etudiant: id_etudiant,
+          id_universite: req.user.id,
+          id_entreprise: id_entreprise || null,
+          titre: 'Mise à jour de votre candidature',
+          message: `Votre candidature pour le poste "${job_title}" chez ${universite_name || 'l\'université'} a été mise à jour : Statut "${statut}".`,
+          type: 'candidature'
+        });
+      }
+    } catch (notifError) {
+      console.error('Erreur notification décision université:', notifError);
+    }
 
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });

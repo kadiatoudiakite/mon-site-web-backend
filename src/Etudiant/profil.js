@@ -141,13 +141,28 @@ router.put('/me', verifyToken, async (req, res) => {
   const etudiantId = req.user.id;
   const { nom, prenom, telephone, commune, quartier, nom_pere, nom_mere, id_filiere, id_niveau } = req.body;
 
+  // Convertir les chaînes vides en null pour éviter les erreurs SQL (surtout pour les clés étrangères comme id_filiere)
+  const safeStr = (val) => (val === '' || val === undefined) ? null : val;
+  const safeInt = (val) => (val === '' || val === undefined || val === null) ? null : parseInt(val, 10);
+
   try {
     await pool.query(`
       UPDATE etudiant 
       SET nom = ?, prenom = ?, telephone = ?, commune = ?, quartier = ?, 
           nom_pere = ?, nom_mere = ?, id_filiere = ?, id_niveau = ?
       WHERE id = ?
-    `, [nom, prenom, telephone, commune, quartier, nom_pere, nom_mere, id_filiere, id_niveau, etudiantId]);
+    `, [
+      safeStr(nom), 
+      safeStr(prenom), 
+      safeStr(telephone), 
+      safeStr(commune), 
+      safeStr(quartier), 
+      safeStr(nom_pere), 
+      safeStr(nom_mere), 
+      safeInt(id_filiere), 
+      safeInt(id_niveau), 
+      etudiantId
+    ]);
 
     res.json({ success: true, message: "Profil mis à jour" });
   } catch (error) {

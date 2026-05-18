@@ -9,9 +9,11 @@ CREATE TABLE IF NOT EXISTS demande_partenariat (
   domaine VARCHAR(100) NOT NULL,
   description TEXT,
   id_universite INT NOT NULL,
+  id_entreprise INT DEFAULT NULL,
   statut ENUM('En attente', 'Acceptée', 'Refusée') DEFAULT 'En attente',
   date_demande TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (id_universite) REFERENCES universite(id) ON DELETE CASCADE
+  FOREIGN KEY (id_universite) REFERENCES universite(id) ON DELETE CASCADE,
+  FOREIGN KEY (id_entreprise) REFERENCES entreprise(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 `;
 

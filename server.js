@@ -10,7 +10,32 @@ const PORT = process.env.PORT || 5000;
 // Middleware
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
-app.use(cors({ origin: true, credentials: true }));
+
+// CORS amélioré pour supporter les connexions mobiles
+app.use(cors({
+  origin: function(origin, callback) {
+    // Accepter toutes les origines en développement (mobile, web, localhost)
+    callback(null, true);
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  maxAge: 86400
+}));
+
+// Ajouter les headers de sécurité et de compatibilité
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  
+  // Répondre aux pré-requêtes OPTIONS
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+  next();
+});
+
 app.use('/uploads', express.static('uploads'));
 app.set('dbPool', pool);
 
@@ -43,14 +68,16 @@ app.use('/api/entreprises/candidatures', require('./src/Entreprise/gestionCandid
 app.use('/api/messagerie', require('./src/Universite/messagerie'));
 app.use('/api/notifications', require('./src/Entreprise/notificationentreprise'));
 app.use('/api/universites/notifications', require('./src/Universite/NotificationUniversite'));
+app.use('/api/etudiants/notifications', require('./src/Etudiant/NotificationEtudiant'));
 // ==================== ROUTES ÉTUDIANT ====================
 app.use('/api/etudiants', require('./src/Etudiant/connexion'));
 app.use('/api/etudiants/offres', require('./src/Etudiant/offre'));
 app.use('/api/etudiants/entreprises', require('./src/Etudiant/entreprise'));
 app.use('/api/etudiants/stages', require('./src/Etudiant/mes_stage'));
-app.use('/api/etudiants/docs', require('./src/Etudiant/docs'));
+app.use('/api/etudiants/docs', require('./src/Etudiant/rapport.js'));
 app.use('/api/etudiants/profil', require('./src/Etudiant/profil'));
-app.use('/api/etudiants/status', require('./src/Etudiant/status'));
+app.use('/api/etudiants/status', require('./src/Etudiant/candidature'));
+app.use('/api/rapports', require('./src/Rapport/rapport')); // Gestion des rapports
 
 // Route racine de test
 app.get('/', (req, res) => {
@@ -75,6 +102,8 @@ app.use((req, res) => {
   });
 });
 
-app.listen(PORT, () => {
-  console.log(`🚀 Serveur démarré sur http://localhost:${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`🚀 Serveur StageTrack démarré sur http://0.0.0.0:${PORT}`);
+  console.log(`   Accessible localement: http://localhost:${PORT}`);
+  console.log(`   Accessible sur le réseau: http://<votre-ip>:${PORT}`);
 });

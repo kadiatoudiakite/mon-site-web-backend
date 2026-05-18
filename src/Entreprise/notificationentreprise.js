@@ -3,26 +3,42 @@ const router = express.Router();
 const pool = require('../../config/db');
 const { verifyToken } = require('../middlewares/auth');
 
+// ==================== COMPTER LES NOTIFICATIONS NON LUES ====================
+router.get('/unread-count', verifyToken, async (req, res) => {
+    const userId = req.user.id;
+    const userRole = req.user.role;
+
+    try {
+        const field = userRole === 'universite' ? 'id_universite' : 'id_entreprise';
+        const [rows] = await pool.query(
+            `SELECT COUNT(*) as count FROM notification WHERE ${field} = ? AND statut = 'non_lu'`,
+            [userId]
+        );
+        res.json({ success: true, count: rows[0].count });
+    } catch (error) {
+        console.error('💥 Erreur unread-count notifications:', error.message);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
 // ==================== RÉCUPÉRER TOUTES LES NOTIFICATIONS ====================
 router.get('/', verifyToken, async (req, res) => {
     const userId = req.user.id;
-    const userRole = req.user.role; // 'universite' ou 'entreprise'
+    const userRole = req.user.role;
 
-    let query = 'SELECT * FROM notification WHERE ';
-    let params = [];
-
-    if (userRole === 'universite') {
-        query += 'id_universite = ? ';
-        params.push(userId);
-    } else {
-        query += 'id_entreprise = ? ';
-        params.push(userId);
-    }
-
-    query += 'ORDER BY created_at DESC';
-
+    const field = userRole === 'universite' ? 'n.id_universite' : 'n.id_entreprise';
     try {
-        const [rows] = await pool.query(query, params);
+        const [rows] = await pool.query(
+            `SELECT n.*, u.nom AS universite_nom, e.nom AS entreprise_nom,
+                    CONCAT(et.nom, ' ', et.prenom) AS etudiant_nom
+             FROM notification n
+             LEFT JOIN universite u ON n.id_universite = u.id
+             LEFT JOIN entreprise e ON n.id_entreprise = e.id
+             LEFT JOIN etudiant et ON n.id_etudiant = et.id
+             WHERE ${field} = ?
+             ORDER BY n.created_at DESC`,
+            [userId]
+        );
         res.json({ success: true, data: rows });
     } catch (error) {
         console.error('💥 Erreur récupération notifications:', error.message);
@@ -37,14 +53,11 @@ router.put('/marquer-lu/:id', verifyToken, async (req, res) => {
     const userRole = req.user.role;
 
     try {
-        let checkQuery = 'SELECT id FROM notification WHERE id = ? AND ';
-        if (userRole === 'universite') {
-            checkQuery += 'id_universite = ?';
-        } else {
-            checkQuery += 'id_entreprise = ?';
-        }
-
-        const [check] = await pool.query(checkQuery, [id, userId]);
+        const field = userRole === 'universite' ? 'id_universite' : 'id_entreprise';
+        const [check] = await pool.query(
+            `SELECT id FROM notification WHERE id = ? AND ${field} = ?`,
+            [id, userId]
+        );
         if (check.length === 0) {
             return res.status(403).json({ success: false, message: 'Non autorisé' });
         }
@@ -63,14 +76,11 @@ router.delete('/:id', verifyToken, async (req, res) => {
     const userRole = req.user.role;
 
     try {
-        let checkQuery = 'SELECT id FROM notification WHERE id = ? AND ';
-        if (userRole === 'universite') {
-            checkQuery += 'id_universite = ?';
-        } else {
-            checkQuery += 'id_entreprise = ?';
-        }
-
-        const [check] = await pool.query(checkQuery, [id, userId]);
+        const field = userRole === 'universite' ? 'id_universite' : 'id_entreprise';
+        const [check] = await pool.query(
+            `SELECT id FROM notification WHERE id = ? AND ${field} = ?`,
+            [id, userId]
+        );
         if (check.length === 0) {
             return res.status(403).json({ success: false, message: 'Non autorisé' });
         }
@@ -82,13 +92,30 @@ router.delete('/:id', verifyToken, async (req, res) => {
     }
 });
 
+// ==================== MARQUER TOUTES COMME LUES ====================
+router.put('/marquer-tout-lu', verifyToken, async (req, res) => {
+    const userId = req.user.id;
+    const userRole = req.user.role;
+
+    try {
+        const field = userRole === 'universite' ? 'id_universite' : 'id_entreprise';
+        await pool.query(
+            `UPDATE notification SET statut = 'lu' WHERE ${field} = ? AND statut = 'non_lu'`,
+            [userId]
+        );
+        res.json({ success: true, message: 'Toutes les notifications ont été marquées comme lues' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
 // ==================== FONCTION UTILITAIRE POUR CRÉER UNE NOTIFICATION ====================
-// Cette fonction peut être importée dans d'autres fichiers (ex: lors d'une nouvelle candidature)
-const createNotification = async ({ id_universite, id_entreprise, titre, message, type }) => {
+// Types supportés: candidature, partenariat, offre, message, alerte, info
+const createNotification = async ({ id_universite, id_entreprise, id_etudiant, titre, message, type }) => {
     try {
         await pool.query(
-            'INSERT INTO notification (id_universite, id_entreprise, titre, message, type) VALUES (?, ?, ?, ?, ?)',
-            [id_universite || null, id_entreprise || null, titre, message, type || 'info']
+            'INSERT INTO notification (id_universite, id_entreprise, id_etudiant, titre, message, type) VALUES (?, ?, ?, ?, ?, ?)',
+            [id_universite || null, id_entreprise || null, id_etudiant || null, titre, message, type || 'info']
         );
         return true;
     } catch (error) {
@@ -97,6 +124,11 @@ const createNotification = async ({ id_universite, id_entreprise, titre, message
     }
 };
 
+// Attache createNotification au router ET comme propriété nommée sur l'export
+// Les deux formes fonctionnent :
+//   const notifModule = require('./notificationentreprise');
+//   notifModule.createNotification(...)          ← via router property
+//   const { createNotification } = require(...) ← via named export
 router.createNotification = createNotification;
-
 module.exports = router;
+module.exports.createNotification = createNotification;
