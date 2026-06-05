@@ -38,7 +38,36 @@ router.post('/postuler', upload.fields([
   }
 
   try {
-    // 1. Vérifier si l'étudiant a déjà postulé à CETTE offre spécifique
+    // 1. Vérifier si l'offre existe et n'est pas expirée
+    const [offreCheck] = await pool.query(
+      'SELECT id, date_fin FROM offre_stage WHERE id = ?',
+      [id_offre_stage]
+    );
+
+    if (offreCheck.length === 0) {
+      return res.status(404).json({ 
+        success: false, 
+        message: "Cette offre de stage n'existe pas." 
+      });
+    }
+
+    // Vérifier si l'offre est expirée
+    const offre = offreCheck[0];
+    if (offre.date_fin) {
+      const dateFin = new Date(offre.date_fin);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      dateFin.setHours(0, 0, 0, 0);
+      
+      if (dateFin < today) {
+        return res.status(400).json({ 
+          success: false, 
+          message: "Cette offre de stage a expiré et n'accepte plus de candidatures." 
+        });
+      }
+    }
+
+    // 2. Vérifier si l'étudiant a déjà postulé à CETTE offre spécifique
     const [existing] = await pool.query(
       'SELECT id FROM candidature WHERE id_etudiant = ? AND id_offre_stage = ?',
       [id_etudiant, id_offre_stage]
@@ -51,7 +80,7 @@ router.post('/postuler', upload.fields([
       });
     }
 
-    // 2. Insérer la candidature
+    // 3. Insérer la candidature
     // Note: on utilise cv_fichier pour CV et lettre_motivation pour le fichier ou texte selon le schéma
     await pool.query(
       `INSERT INTO candidature (id_etudiant, id_offre_stage, cv_fichier, lettre_motivation, date_candidature, statut) 
@@ -59,7 +88,7 @@ router.post('/postuler', upload.fields([
       [id_etudiant, id_offre_stage, cv_fichier, lettre_motivation_fichier || lettre_motivation_texte]
     );
 
-    // 3. Notification pour le créateur de l'offre
+    // 4. Notification pour le créateur de l'offre
     try {
       const [details] = await pool.query(`
         SELECT 

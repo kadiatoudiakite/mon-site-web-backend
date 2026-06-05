@@ -17,21 +17,27 @@ const storage = multer.diskStorage({
   },
   filename: (req, file, cb) => {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, 'profile-' + uniqueSuffix + path.extname(file.originalname));
+    const ext = path.extname(file.originalname).toLowerCase();
+    cb(null, 'profile-' + uniqueSuffix + ext);
   }
 });
 
 const upload = multer({ 
   storage: storage,
-  limits: { fileSize: 2 * 1024 * 1024 }, // 2MB max
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB max
   fileFilter: (req, file, cb) => {
-    const filetypes = /jpeg|jpg|png/;
-    const mimetype = filetypes.test(file.mimetype);
-    const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
-    if (mimetype && extname) {
+    // Accepter tous les types MIME d'image courants
+    const acceptedMimes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    const acceptedExts = /\.(jpg|jpeg|png|gif|webp)$/i;
+    
+    const mimeOk = acceptedMimes.includes(file.mimetype);
+    const extOk = acceptedExts.test(path.extname(file.originalname));
+    
+    if (mimeOk && extOk) {
       return cb(null, true);
     }
-    cb(new Error("Seules les images (jpg, jpeg, png) sont autorisées"));
+    
+    cb(new Error("Seules les images (jpg, jpeg, png, gif, webp) sont autorisées"));
   }
 });
 
@@ -114,25 +120,76 @@ router.get('/:id', async (req, res) => {
 router.put('/me/photo', verifyToken, upload.single('photo'), async (req, res) => {
   const etudiantId = req.user.id;
   
-  if (!req.file) {
-    return res.status(400).json({ success: false, message: "Aucun fichier envoyé" });
-  }
-
-  const photoPath = `/uploads/profiles/${req.file.filename}`;
-
   try {
-    // Optionnel : Supprimer l'ancienne photo si elle existe
-    const [old] = await pool.query('SELECT photo FROM etudiant WHERE id = ?', [etudiantId]);
-    if (old[0] && old[0].photo && old[0].photo.startsWith('/uploads/')) {
-        const oldPath = path.join(__dirname, '../../', old[0].photo);
-        if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+    // Vérifier que le fichier a bien été uploadé
+    if (!req.file) {
+      console.error('Aucun fichier reçu pour l\'étudiant', etudiantId);
+      return res.status(400).json({ 
+        success: false, 
+        message: "Aucun fichier envoyé" 
+      });
     }
 
-    await pool.query('UPDATE etudiant SET photo = ? WHERE id = ?', [photoPath, etudiantId]);
-    res.json({ success: true, message: "Photo mise à jour", photo: photoPath });
+    console.log('Upload de photo pour étudiant', etudiantId, '- Fichier:', req.file.filename);
+
+    const photoPath = `/uploads/profiles/${req.file.filename}`;
+
+    // Récupérer l'ancienne photo avant mise à jour
+    const [old] = await pool.query(
+      'SELECT photo FROM etudiant WHERE id = ?', 
+      [etudiantId]
+    );
+
+    // Supprimer l'ancienne photo si elle existe
+    if (old && old.length > 0 && old[0].photo && old[0].photo.startsWith('/uploads/')) {
+      try {
+        const oldPath = path.join(__dirname, '../../', old[0].photo);
+        if (fs.existsSync(oldPath)) {
+          fs.unlinkSync(oldPath);
+          console.log('Ancienne photo supprimée:', oldPath);
+        }
+      } catch (deleteError) {
+        console.warn('Erreur lors de la suppression de l\'ancienne photo:', deleteError);
+        // Ne pas bloquer le processus si la suppression échoue
+      }
+    }
+
+    // Mettre à jour la photo dans la base de données
+    const [result] = await pool.query(
+      'UPDATE etudiant SET photo = ? WHERE id = ?', 
+      [photoPath, etudiantId]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ 
+        success: false, 
+        message: "Étudiant non trouvé" 
+      });
+    }
+
+    console.log('Photo mise à jour avec succès pour étudiant', etudiantId);
+    
+    res.json({ 
+      success: true, 
+      message: "Photo de profil mise à jour avec succès", 
+      photo: photoPath 
+    });
+
   } catch (error) {
-    console.error('Erreur MAJ photo:', error);
-    res.status(500).json({ success: false, message: "Erreur serveur" });
+    console.error('Erreur lors de la mise à jour de la photo:', error);
+    
+    // Si c'est une erreur multer
+    if (error.code === 'LIMIT_FILE_SIZE') {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Le fichier est trop volumineux (max 5MB)" 
+      });
+    }
+    
+    res.status(500).json({ 
+      success: false, 
+      message: error.message || "Erreur serveur lors de la mise à jour de la photo" 
+    });
   }
 });
 

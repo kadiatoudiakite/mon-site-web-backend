@@ -27,21 +27,27 @@ router.get('/statistiques', authenticateToken, async (req, res) => {
   try {
     const universiteId = req.user.id;
 
-    // 1. Répartition par Filière (Global car les étudiants n'ont pas d'id_universite direct)
+    // 1. Répartition par Filière (étudiants ayant candidaté aux offres de cette université)
     const [filieres] = await pool.query(`
-      SELECT f.nom as label, COUNT(e.id) as value
+      SELECT f.nom as label, COUNT(DISTINCT e.id) as value
       FROM filiere f
       JOIN etudiant e ON f.id = e.id_filiere
+      JOIN candidature c ON e.id = c.id_etudiant
+      JOIN offre_stage o ON c.id_offre_stage = o.id
+      WHERE o.id_universite = ?
       GROUP BY f.id
-    `);
+    `, [universiteId]);
 
-    // 2. Répartition par Niveau (Global car les étudiants n'ont pas d'id_universite direct)
+    // 2. Répartition par Niveau (idem)
     const [niveaux] = await pool.query(`
-      SELECT n.libelle as label, COUNT(e.id) as value
+      SELECT n.libelle as label, COUNT(DISTINCT e.id) as value
       FROM niveau n
       JOIN etudiant e ON n.id = e.id_niveau
+      JOIN candidature c ON e.id = c.id_etudiant
+      JOIN offre_stage o ON c.id_offre_stage = o.id
+      WHERE o.id_universite = ?
       GROUP BY n.id
-    `);
+    `, [universiteId]);
 
     // 3. Stats Candidatures (Filtre par les offres de CETTE Université + Mappage des statuts pour le frontend)
     const [candidatures] = await pool.query(`
@@ -67,12 +73,14 @@ router.get('/statistiques', authenticateToken, async (req, res) => {
       }
     });
   } catch (error) {
+    console.error('Erreur statistiques étudiants:', error.message);
     res.status(500).json({ success: false, message: error.message });
   }
 });
 
 router.get('/liste-complete', authenticateToken, async (req, res) => {
   try {
+    const universiteId = req.user.id;
     const [students] = await pool.query(`
       SELECT 
         e.id,
@@ -83,18 +91,24 @@ router.get('/liste-complete', authenticateToken, async (req, res) => {
         f.nom as filiere,
         n.libelle as niveau,
         (SELECT COUNT(*) FROM candidature WHERE id_etudiant = e.id) as nb_candidatures,
-        (SELECT COUNT(*) FROM candidature WHERE id_etudiant = e.id AND statut IN ('Accepté', 'Acceptée')) as nb_stages
+        (SELECT COUNT(*) FROM candidature WHERE id_etudiant = e.id AND statut = 'Acceptée') as nb_stages
       FROM etudiant e
       LEFT JOIN filiere f ON e.id_filiere = f.id
       LEFT JOIN niveau n ON e.id_niveau = n.id
+      WHERE EXISTS (
+        SELECT 1 FROM candidature c
+        JOIN offre_stage o ON c.id_offre_stage = o.id
+        WHERE c.id_etudiant = e.id AND o.id_universite = ?
+      )
       ORDER BY e.nom ASC
-    `);
+    `, [universiteId]);
 
     res.json({
       success: true,
       data: students
     });
   } catch (error) {
+    console.error('Erreur liste étudiants:', error.message);
     res.status(500).json({ success: false, message: error.message });
   }
 });

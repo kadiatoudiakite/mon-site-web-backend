@@ -232,6 +232,19 @@ router.get('/entreprise/recus', verifyToken, async (req, res) => {
 router.put('/entreprise/valider/:id', verifyToken, async (req, res) => {
   const { statut, commentaire_validation } = req.body;
   try {
+    // Vérifier si le rapport est déjà validé
+    const [existing] = await pool.query(
+      'SELECT statut FROM rapport WHERE id = ?',
+      [req.params.id]
+    );
+
+    if (existing.length > 0 && existing[0].statut === 'valide') {
+      return res.status(400).json({
+        success: false,
+        message: 'Ce rapport a déjà été validé et ne peut plus être modifié.'
+      });
+    }
+
     const [result] = await pool.query(
       `UPDATE rapport SET statut = ?, commentaire_validation = ? WHERE id = ? AND id_entreprise = ?`,
       [statut, commentaire_validation, req.params.id, req.user.id]

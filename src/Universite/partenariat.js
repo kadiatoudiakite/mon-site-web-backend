@@ -122,17 +122,16 @@ router.put('/:id/statut', verifyToken, async (req, res) => {
     res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 });
-
 // ======================
 // ROUTES PUBLIQUES
 // ======================
 
 // Soumettre une nouvelle demande de partenariat
 router.post('/demande', async (req, res) => {
-  const { name, email, domain, description, universiteId } = req.body;
+  const { name, email, domain, description } = req.body;
   const idEntrepriseFromToken = getEntrepriseIdFromToken(req);
 
-  // Validation
+  // Validation renforcée
   if (!name?.trim() || !email?.trim() || !domain?.trim() || !description?.trim()) {
     return res.status(400).json({
       success: false,
@@ -140,74 +139,79 @@ router.post('/demande', async (req, res) => {
     });
   }
 
-  const idUniversite = parseInt(universiteId, 10);
-  if (Number.isNaN(idUniversite)) {
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return res.status(400).json({
       success: false,
-      message: 'ID université invalide'
+      message: 'Adresse email invalide'
     });
   }
 
   try {
     const pool = getDbPool(req);
+    const SUPER_ADMIN_ID = 4; // ID fixe du Super Admin
 
-    // Vérifier que l'université existe
-    const [uniExists] = await pool.execute(
-      'SELECT id, nom FROM universite WHERE id = ?',
-      [idUniversite]
+    // Vérification que le super admin existe
+    const [superAdminCheck] = await pool.execute(
+      'SELECT id, nom FROM universite WHERE id = ? AND role = "super_admin"',
+      [SUPER_ADMIN_ID]
     );
 
-    if (uniExists.length === 0) {
-      return res.status(404).json({
+    if (superAdminCheck.length === 0) {
+      return res.status(500).json({
         success: false,
-        message: 'Université non trouvée'
+        message: "Configuration erreur : Super Admin introuvable (ID 4)"
       });
     }
+
+    const universiteName = superAdminCheck[0].nom || 'Super Admin';
 
     let entrepriseId = idEntrepriseFromToken;
     if (!entrepriseId) {
       const [entrepriseMatches] = await pool.execute(
         'SELECT id FROM entreprise WHERE email = ? LIMIT 1',
-        [email.trim()]
+        [email.trim().toLowerCase()]
       );
       if (entrepriseMatches.length > 0) {
         entrepriseId = entrepriseMatches[0].id;
       }
     }
 
-    await pool.execute(
-      `INSERT INTO demande_partenariat 
-       (nom_entreprise, email_entreprise, domaine, description, id_universite${entrepriseId ? ', id_entreprise' : ''}) 
-       VALUES (?, ?, ?, ?, ?${entrepriseId ? ', ?' : ''})`,
-      entrepriseId
-        ? [name.trim(), email.trim(), domain.trim(), description.trim(), idUniversite, entrepriseId]
-        : [name.trim(), email.trim(), domain.trim(), description.trim(), idUniversite]
-    );
+    // Insertion
+    const query = `
+      INSERT INTO demande_partenariat 
+      (nom_entreprise, email_entreprise, domaine, description, id_universite${entrepriseId ? ', id_entreprise' : ''}) 
+      VALUES (?, ?, ?, ?, ?${entrepriseId ? ', ?' : ''})
+    `;
 
-    const universiteName = uniExists[0].nom || 'votre université';
+    const values = entrepriseId
+      ? [name.trim(), email.trim().toLowerCase(), domain.trim(), description.trim(), SUPER_ADMIN_ID, entrepriseId]
+      : [name.trim(), email.trim().toLowerCase(), domain.trim(), description.trim(), SUPER_ADMIN_ID];
 
-    // Notification pour l'université
+    await pool.execute(query, values);
+
+    // Notifications
     try {
       const notificationModule = require('../Entreprise/notificationentreprise');
+
       await notificationModule.createNotification({
-        id_universite: idUniversite,
+        id_universite: SUPER_ADMIN_ID,
         id_entreprise: entrepriseId || null,
         titre: 'Nouvelle demande de partenariat',
-        message: `L'entreprise ${name} souhaite établir un partenariat avec ${universiteName}.`,
+        message: `L'entreprise ${name.trim()} a soumis une demande de partenariat.`,
         type: 'partenariat'
       });
 
       if (entrepriseId) {
         await notificationModule.createNotification({
           id_entreprise: entrepriseId,
-          id_universite: idUniversite,
-          titre: 'Demande de partenariat envoyée',
-          message: `Votre demande à ${universiteName} a bien été envoyée. Vous recevrez une réponse dès que l'université aura traité votre demande.`,
+          id_universite: SUPER_ADMIN_ID,
+          titre: 'Demande envoyée',
+          message: `Votre demande de partenariat auprès de ${universiteName} a été enregistrée avec succès.`,
           type: 'partenariat'
         });
       }
     } catch (notifError) {
-      console.error('Erreur notification partenariat:', notifError);
+      console.error('Erreur notification:', notifError);
     }
 
     res.status(201).json({
@@ -217,23 +221,10 @@ router.post('/demande', async (req, res) => {
 
   } catch (error) {
     console.error('Erreur création demande:', error);
-    res.status(500).json({ success: false, message: 'Erreur serveur' });
+    res.status(500).json({ 
+      success: false, 
+      message: 'Erreur serveur. Veuillez réessayer.' 
+    });
   }
 });
-
-// Récupérer la liste des universités (pour le formulaire public)
-router.get('/all', async (req, res) => {
-  try {
-    const pool = getDbPool(req);
-    const [rows] = await pool.execute(
-      'SELECT id, nom FROM universite ORDER BY nom ASC'
-    );
-
-    res.json({ success: true, data: rows });
-  } catch (error) {
-    console.error('Erreur fetch universités:', error);
-    res.status(500).json({ success: false, message: 'Erreur serveur' });
-  }
-});
-
 module.exports = router;

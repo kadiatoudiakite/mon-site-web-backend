@@ -2,6 +2,7 @@
 const express = require('express');
 const router = express.Router();
 const { verifyToken } = require('../middlewares/auth');
+const mailer = require('../../config/mailercreation_entreprise');
 
 console.log('Entreprise routes loaded');
 
@@ -98,6 +99,19 @@ router.post('/', verifyToken, async (req, res) => {
     console.log('✅ VÉRIFICATION RÉUSSIE: Entreprise confirmée en base:', entrepriseCreee);
 
     // ====================== RÉPONSE ======================
+    // Envoi du mail de création avec les identifiants
+    try {
+      await mailer.sendCreationMail(email, plainPassword, {
+        nom: entrepriseCreee.nom,
+        id: entrepriseCreee.id,
+        email: entrepriseCreee.email
+      });
+      console.log('📧 Email de création envoyé à', email);
+    } catch (mailErr) {
+      console.error('⚠️ Erreur d\'envoi d\'email de création:', mailErr);
+      // Continue sans bloquer la création
+    }
+
     res.status(201).json({
       success: true,
       message: 'Entreprise créée avec succès et vérifiée en base de données',

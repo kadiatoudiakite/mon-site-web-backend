@@ -64,7 +64,6 @@ router.put('/marquer-vue/:id', verifyToken, async (req, res) => {
   const { id } = req.params;
   const universiteId = req.user.id;
   try {
-    // On ne marque "Vue" que si c'était "En attente" et que l'offre appartient à l'université
     const [result] = await pool.query(
       `UPDATE candidature c
        JOIN offre_stage o ON c.id_offre_stage = o.id
@@ -119,14 +118,12 @@ router.put('/statut/:id', verifyToken, async (req, res) => {
   const { id } = req.params;
   const { statut, commentaire, date_entretien } = req.body;
 
-  // Validation des statuts autorisés par l'ENUM
   const validStatus = ['En attente', 'Vue', 'Acceptée', 'Refusée'];
   if (!validStatus.includes(statut)) {
     return res.status(400).json({ success: false, message: 'Statut invalide' });
   }
 
   try {
-    // Vérifier que l'offre appartient bien à l'université
     const [rows] = await pool.query(
       `SELECT c.statut
        FROM candidature c
@@ -159,7 +156,7 @@ router.put('/statut/:id', verifyToken, async (req, res) => {
 
     res.json({ success: true, message: `Candidature mise à jour : ${statut}` });
 
-    // Notification pour l'entreprise propriétaire de l'offre
+    // Notifications
     try {
       const [details] = await pool.query(`
         SELECT 
@@ -190,7 +187,6 @@ router.put('/statut/:id', verifyToken, async (req, res) => {
           });
         }
 
-        // NOTIFICATION POUR L'ÉTUDIANT
         await createStudentNotification({
           id_etudiant: id_etudiant,
           id_universite: req.user.id,
@@ -245,7 +241,6 @@ router.get('/stagiaires', verifyToken, async (req, res) => {
 router.get('/analyse', verifyToken, async (req, res) => {
   const universiteId = req.user.id;
   try {
-    // 1. Statistiques globales (Total, Acceptés, En attente, Refusés)
     const [globalStats] = await pool.query(`
       SELECT
         COUNT(*) as total,
@@ -257,7 +252,6 @@ router.get('/analyse', verifyToken, async (req, res) => {
       WHERE o.id_universite = ?
     `, [universiteId]);
 
-    // Candidatures par mois (pour le line chart)
     const [candidaturesParMois] = await pool.query(`
       SELECT
         DATE_FORMAT(c.date_candidature, '%b') as mois,
@@ -269,7 +263,6 @@ router.get('/analyse', verifyToken, async (req, res) => {
       ORDER BY FIELD(mois, 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec')
     `, [universiteId]);
 
-    // Top 5 des offres les plus populaires
     const [topOffres] = await pool.query(`
       SELECT
         o.titre,
@@ -282,7 +275,6 @@ router.get('/analyse', verifyToken, async (req, res) => {
       LIMIT 5
     `, [universiteId]);
 
-    // Distribution par Domaine
     const [domaines] = await pool.query(`
       SELECT
         d.nom,

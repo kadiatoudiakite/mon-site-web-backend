@@ -8,6 +8,8 @@ console.log('Universite routes loaded');
 // Récupérer le pool depuis l'app
 const getDbPool = (req) => req.app.get('dbPool');
 
+const isUniversiteUser = (user) => user && ['super_admin', 'university_admin'].includes(user.role);
+
 // ====================== RÉCUPÉRER TOUS LES DOMAINES ======================
 router.get('/domaines', async (req, res) => {
   try {
@@ -126,6 +128,10 @@ router.get('/dashboard/stats/:universiteId', async (req, res) => {
 
 // ====================== RÉCUPÉRER LE PROFIL ======================
 router.get('/profile', verifyToken, async (req, res) => {
+  if (!isUniversiteUser(req.user)) {
+    return res.status(403).json({ success: false, message: 'Accès réservé aux comptes université' });
+  }
+
   try {
     const pool = getDbPool(req);
     const [rows] = await pool.execute(
@@ -141,6 +147,9 @@ router.get('/profile', verifyToken, async (req, res) => {
 
 // ====================== METTRE À JOUR LE PROFIL ======================
 router.put('/profile', verifyToken, async (req, res) => {
+  if (!isUniversiteUser(req.user)) {
+    return res.status(403).json({ success: false, message: 'Accès réservé aux comptes université' });
+  }
   const { nom, prenom, email, telephone } = req.body;
   try {
     const pool = getDbPool(req);
@@ -156,6 +165,10 @@ router.put('/profile', verifyToken, async (req, res) => {
 
 // ====================== CHANGER LE MOT DE PASSE ======================
 router.post('/change-password', verifyToken, async (req, res) => {
+  if (!isUniversiteUser(req.user)) {
+    return res.status(403).json({ success: false, message: 'Accès réservé aux comptes université' });
+  }
+
   const { currentPassword, newPassword } = req.body;
   try {
     const pool = getDbPool(req);

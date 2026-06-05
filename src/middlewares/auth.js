@@ -1,4 +1,7 @@
+require('dotenv').config();
 const jwt = require('jsonwebtoken');
+const { JWT_SECRET } = require('../config/jwt');
+const logger = require('../utils/logger');
 
 // Middleware d'authentification pour vérifier le JWT
 const verifyToken = (req, res, next) => {
@@ -7,7 +10,7 @@ const verifyToken = (req, res, next) => {
     const authHeader = req.headers.authorization;
     
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      console.warn('⚠️ [AUTH] Token manquant ou format invalide');
+      logger.warn('⚠️ [AUTH] Token manquant ou format invalide');
       return res.status(401).json({
         success: false,
         message: 'Token d\'authentification manquant ou invalide'
@@ -19,17 +22,18 @@ const verifyToken = (req, res, next) => {
     // Vérifier et décoder le token
     const decoded = jwt.verify(
       token,
-      process.env.JWT_SECRET || 'stagetrack_secret_key_2024'
+      JWT_SECRET
     );
 
-    console.log('✅ [AUTH] Token valide - Université ID:', decoded.id);
+    logger.info('✅ [AUTH] Token valide - Université ID:', decoded.id);
     
     // Ajouter les infos du token à la requête
     req.user = decoded;
     next();
 
   } catch (error) {
-    console.error('❌ [AUTH] Erreur vérification token:', error.message);
+    logger.error('❌ [AUTH] Erreur interne:', error);
+    
     return res.status(401).json({
       success: false,
       message: 'Token invalide ou expiré'
@@ -40,7 +44,7 @@ const verifyToken = (req, res, next) => {
 // Middleware pour restreindre l'accès au Super Admin uniquement
 const requireSuperAdmin = (req, res, next) => {
   if (!req.user || req.user.role !== 'super_admin') {
-    console.warn(`⚠️ [AUTH] Accès refusé - Role: ${req.user ? req.user.role : 'aucun'}`);
+    logger.warn(`⚠️ [AUTH] Accès refusé - Role: ${req.user ? req.user.role : 'aucun'}`);
     return res.status(403).json({
       success: false,
       message: 'Accès réservé au Super Administrateur'

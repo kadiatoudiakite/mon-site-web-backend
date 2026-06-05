@@ -3,14 +3,14 @@ const mysql = require('mysql2/promise');
 require('dotenv').config();
 
 const dbConfig = {
-  host     : process.env.DB_HOST,
-  user     : process.env.DB_USER,
-  password : process.env.DB_PASSWORD,
-  database : process.env.DB_NAME,
-  waitForConnections : true,
-  connectionLimit    : 10,       // suffisant pour tester
-  queueLimit         : 0,
-  connectTimeout     : 10000     // 10 secondes max
+  host: process.env.DB_HOST || 'localhost',
+  user: process.env.DB_USER || 'root',
+  password: process.env.DB_PASSWORD || '',
+  database: process.env.DB_NAME || 'db_stagetrack',
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0,
+  connectTimeout: 10000
 };
 
 const pool = mysql.createPool(dbConfig);
