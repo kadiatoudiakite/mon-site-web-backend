@@ -10,9 +10,10 @@ router.get('/unread-count', verifyToken, async (req, res) => {
 
     try {
         const field = userRole === 'universite' ? 'id_universite' : 'id_entreprise';
+        const createdByField = userRole === 'universite' ? 'universite' : 'entreprise';
         const [rows] = await pool.query(
-            `SELECT COUNT(*) as count FROM notification WHERE ${field} = ? AND statut = 'non_lu'`,
-            [userId]
+            `SELECT COUNT(*) as count FROM notification WHERE ${field} = ? AND statut = 'non_lu' AND (created_by IS NULL OR created_by != ?)`,
+            [userId, createdByField]
         );
         res.json({ success: true, count: rows[0].count });
     } catch (error) {
@@ -27,6 +28,7 @@ router.get('/', verifyToken, async (req, res) => {
     const userRole = req.user.role;
 
     const field = userRole === 'universite' ? 'n.id_universite' : 'n.id_entreprise';
+    const createdByField = userRole === 'universite' ? 'universite' : 'entreprise';
     try {
         const [rows] = await pool.query(
             `SELECT n.*, u.nom AS universite_nom, e.nom AS entreprise_nom,
@@ -35,9 +37,9 @@ router.get('/', verifyToken, async (req, res) => {
              LEFT JOIN universite u ON n.id_universite = u.id
              LEFT JOIN entreprise e ON n.id_entreprise = e.id
              LEFT JOIN etudiant et ON n.id_etudiant = et.id
-             WHERE ${field} = ?
+             WHERE ${field} = ? AND (n.created_by IS NULL OR n.created_by != ?)
              ORDER BY n.created_at DESC`,
-            [userId]
+            [userId, createdByField]
         );
         res.json({ success: true, data: rows });
     } catch (error) {
@@ -111,11 +113,12 @@ router.put('/marquer-tout-lu', verifyToken, async (req, res) => {
 
 // ==================== FONCTION UTILITAIRE POUR CRÉER UNE NOTIFICATION ====================
 // Types supportés: candidature, partenariat, offre, message, alerte, info
-const createNotification = async ({ id_universite, id_entreprise, id_etudiant, titre, message, type }) => {
+// created_by: type de l'utilisateur qui a créé la notification (entreprise, universite, etudiant, systeme)
+const createNotification = async ({ id_universite, id_entreprise, id_etudiant, titre, message, type, created_by }) => {
     try {
         await pool.query(
-            'INSERT INTO notification (id_universite, id_entreprise, id_etudiant, titre, message, type) VALUES (?, ?, ?, ?, ?, ?)',
-            [id_universite || null, id_entreprise || null, id_etudiant || null, titre, message, type || 'info']
+            'INSERT INTO notification (id_universite, id_entreprise, id_etudiant, titre, message, type, created_by) VALUES (?, ?, ?, ?, ?, ?, ?)',
+            [id_universite || null, id_entreprise || null, id_etudiant || null, titre, message, type || 'info', created_by || 'systeme']
         );
         return true;
     } catch (error) {

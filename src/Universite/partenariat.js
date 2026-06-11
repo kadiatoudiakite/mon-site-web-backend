@@ -105,7 +105,8 @@ router.put('/:id/statut', verifyToken, async (req, res) => {
           id_universite: req.user.id,
           titre: 'Statut de votre demande de partenariat',
           message: `Votre demande de partenariat auprès de ${universiteName} a été ${statut.toLowerCase()}.`,
-          type: 'partenariat'
+          type: 'partenariat',
+          created_by: 'universite'
         });
       } catch (notifError) {
         console.error('Erreur notification statut partenariat:', notifError);
@@ -198,7 +199,8 @@ router.post('/demande', async (req, res) => {
         id_entreprise: entrepriseId || null,
         titre: 'Nouvelle demande de partenariat',
         message: `L'entreprise ${name.trim()} a soumis une demande de partenariat.`,
-        type: 'partenariat'
+        type: 'partenariat',
+        created_by: 'entreprise'
       });
 
       if (entrepriseId) {
@@ -207,7 +209,8 @@ router.post('/demande', async (req, res) => {
           id_universite: SUPER_ADMIN_ID,
           titre: 'Demande envoyée',
           message: `Votre demande de partenariat auprès de ${universiteName} a été enregistrée avec succès.`,
-          type: 'partenariat'
+          type: 'partenariat',
+          created_by: 'entreprise'
         });
       }
     } catch (notifError) {

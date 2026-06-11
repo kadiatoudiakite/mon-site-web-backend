@@ -159,7 +159,8 @@ router.post(['/', '/publication_universite'], authenticateToken, upload.single('
           id_universite: req.user.id,
           titre: 'Nouvelle offre de stage universitaire',
           message: `${univNom} a publié une nouvelle offre : "${titre}"`,
-          type: 'offre'
+          type: 'offre',
+          created_by: 'universite'
         });
       }
 
@@ -262,7 +263,8 @@ router.put('/:id', authenticateToken, upload.single('fichier'), async (req, res)
             id_universite: req.user.id,
             titre: 'Mise à jour d\'offre de stage',
             message: `L'offre "${titre.trim()}" (à laquelle vous avez postulé) a été modifiée par ${univNom}.`,
-            type: 'offre'
+            type: 'offre',
+            created_by: 'universite'
           });
         }
       }
@@ -333,7 +335,8 @@ router.delete('/:id', authenticateToken, async (req, res) => {
             id_universite: req.user.id,
             titre: 'Offre de stage retirée',
             message: `${univNom} a retiré l'offre : "${titreOffre}" à laquelle vous aviez postulé.`,
-            type: 'alerte'
+            type: 'alerte',
+            created_by: 'universite'
           });
         }
       }

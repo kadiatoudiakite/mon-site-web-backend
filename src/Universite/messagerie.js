@@ -121,7 +121,8 @@ router.post('/message', authenticateToken, async (req, res) => {
             id_universite: conv[0].id_universite,
             titre: 'Nouveau message reçu',
             message: `${senderName} vous a envoyé un message : "${contenu.substring(0, 80)}${contenu.length > 80 ? '...' : ''}"`,
-            type: 'message'
+            type: 'message',
+            created_by: 'universite'
           });
         } else {
           // L'entreprise envoie → notifier l'université
@@ -132,7 +133,8 @@ router.post('/message', authenticateToken, async (req, res) => {
             id_entreprise: conv[0].id_entreprise,
             titre: 'Nouveau message reçu',
             message: `${senderName} vous a envoyé un message : "${contenu.substring(0, 80)}${contenu.length > 80 ? '...' : ''}"`,
-            type: 'message'
+            type: 'message',
+            created_by: 'entreprise'
           });
         }
       }

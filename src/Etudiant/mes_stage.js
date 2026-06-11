@@ -110,7 +110,8 @@ router.post('/postuler', upload.fields([
           id_etudiant: id_etudiant,
           titre: 'Nouvelle candidature reçue',
           message: `${student_name} a postulé pour le poste : ${job_title}`,
-          type: 'candidature'
+          type: 'candidature',
+          created_by: 'etudiant'
         });
       }
     } catch (notifError) {

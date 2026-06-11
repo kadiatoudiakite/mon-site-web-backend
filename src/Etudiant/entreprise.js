@@ -68,6 +68,7 @@ router.get('/organismes', async (req, res) => {
 router.get('/:id/offres', async (req, res) => {
   const { id } = req.params;
   const { type } = req.query; // 'entreprise' ou 'universite'
+  const etudiantId = req.query.etudiantId || 1; // On simule l'ID 1 si non fourni
 
   try {
     let query = `
@@ -77,7 +78,9 @@ router.get('/:id/offres', async (req, res) => {
         CONCAT(u.prenom, ' ', u.nom) as universite_nom,
         d.nom as domaine_nom,
         (SELECT COUNT(*) FROM aime WHERE id_offre_stage = os.id) as likes_count,
-        (SELECT COUNT(*) FROM commentaire WHERE id_offre_stage = os.id) as comments_count
+        (SELECT COUNT(*) FROM commentaire WHERE id_offre_stage = os.id) as comments_count,
+        (SELECT COUNT(*) FROM aime WHERE id_offre_stage = os.id AND id_etudiant = ?) as is_liked,
+        (SELECT COUNT(*) FROM candidature WHERE id_offre_stage = os.id AND id_etudiant = ?) as has_applied
       FROM offre_stage os
       LEFT JOIN entreprise e ON os.id_entreprise = e.id
       LEFT JOIN universite u ON os.id_universite = u.id
@@ -92,11 +95,38 @@ router.get('/:id/offres', async (req, res) => {
     
     query += `ORDER BY os.created_at DESC`;
 
-    const [rows] = await pool.query(query, [id]);
+    const [rows] = await pool.query(query, [etudiantId, etudiantId, id]);
+
+    // Transformer is_liked et has_applied en boolean, et vérifier fermeture automatique
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const data = rows.map(row => {
+      // Vérifier si le statut est déjà fermé ou pourvu
+      const statutClosed = row.statut === 'Clôturée' || row.statut === 'Pourvue';
+      
+      // Vérifier si la date_fin est dépassée pour fermeture automatique
+      const dateFin = row.date_fin ? new Date(row.date_fin) : null;
+      if (dateFin) {
+        dateFin.setHours(0, 0, 0, 0);
+      }
+      const dateExpired = dateFin && dateFin < today;
+      
+      // L'offre est fermée si le statut l'indique OU si la date est expirée
+      const is_closed = statutClosed || dateExpired;
+      
+      return {
+        ...row,
+        is_liked: !!row.is_liked,
+        has_applied: !!row.has_applied,
+        is_closed: is_closed,
+        is_expired_by_date: dateExpired
+      };
+    });
 
     res.json({
       success: true,
-      data: rows
+      data
     });
 
   } catch (error) {
