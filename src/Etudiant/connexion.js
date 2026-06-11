@@ -2,10 +2,26 @@ const express = require('express');
 // bcrypt supprimé selon demande client
 const jwt = require('jsonwebtoken');
 const pool = require('../../config/db');
+const { sendVerificationCodeMail } = require('../../config/mailercreation_etudiant');
 
 const router = express.Router();
 
 console.log('Etudiant routes loaded');
+
+// Initialisation de la table temporaire de vérification
+pool.query(`
+  CREATE TABLE IF NOT EXISTS \`etudiant_verification\` (
+    \`email\` varchar(255) NOT NULL,
+    \`code\` varchar(6) NOT NULL,
+    \`data\` text NOT NULL,
+    \`created_at\` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (\`email\`)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+`).then(() => {
+  console.log('✅ Table etudiant_verification opérationnelle');
+}).catch(err => {
+  console.error('❌ Erreur lors de la création de la table etudiant_verification:', err);
+});
 
 // Route de connexion pour les étudiants
 router.post('/login', async (req, res) => {
@@ -288,6 +304,223 @@ router.post('/register', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Erreur serveur'
+    });
+  }
+});
+
+// Demande d'inscription : validation et envoi du code par email
+router.post('/register-request', async (req, res) => {
+  try {
+    const { matricule, nom, prenom, email, mot_de_passe, id_filiere, id_niveau, sexe } = req.body;
+
+    // Validation des champs requis
+    if (!matricule || !nom || !prenom || !email || !mot_de_passe || !id_filiere || !id_niveau || !sexe) {
+      return res.status(400).json({
+        success: false,
+        message: 'Tous les champs sont requis (y compris le sexe)'
+      });
+    }
+
+    // Validation du format email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Format d\'email invalide'
+      });
+    }
+
+    // Validation de la longueur du mot de passe
+    if (mot_de_passe.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: 'Le mot de passe doit contenir au moins 6 caractères'
+      });
+    }
+
+    // Vérifier si l'email existe déjà dans etudiant
+    const [existingEmail] = await pool.query(
+      'SELECT id FROM etudiant WHERE email = ?',
+      [email]
+    );
+    if (existingEmail.length > 0) {
+      return res.status(409).json({
+        success: false,
+        message: 'Cet email est déjà utilisé'
+      });
+    }
+
+    // Vérifier si le matricule existe déjà dans etudiant
+    const [existingMatricule] = await pool.query(
+      'SELECT id FROM etudiant WHERE matricule = ?',
+      [matricule]
+    );
+    if (existingMatricule.length > 0) {
+      return res.status(409).json({
+        success: false,
+        message: 'Ce matricule est déjà utilisé'
+      });
+    }
+
+    // Vérifier si la filière existe
+    const [filiereExists] = await pool.query(
+      'SELECT id FROM filiere WHERE id = ?',
+      [id_filiere]
+    );
+    if (filiereExists.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Filière invalide'
+      });
+    }
+
+    // Vérifier si le niveau existe
+    const [niveauExists] = await pool.query(
+      'SELECT id FROM niveau WHERE id = ?',
+      [id_niveau]
+    );
+    if (niveauExists.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Niveau invalide'
+      });
+    }
+
+    // Générer un code de vérification à 6 chiffres
+    const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+
+    // Enregistrer le code et les données d'inscription temporaires
+    const registrationData = JSON.stringify({
+      matricule,
+      nom,
+      prenom,
+      email,
+      mot_de_passe,
+      id_filiere,
+      id_niveau,
+      sexe
+    });
+
+    // Insérer ou mettre à jour la demande de vérification
+    await pool.query(
+      `INSERT INTO etudiant_verification (email, code, data) 
+       VALUES (?, ?, ?) 
+       ON DUPLICATE KEY UPDATE code = ?, data = ?, created_at = CURRENT_TIMESTAMP`,
+      [email, verificationCode, registrationData, verificationCode, registrationData]
+    );
+
+    // Envoyer le code de vérification par e-mail
+    await sendVerificationCodeMail(email, verificationCode);
+
+    res.json({
+      success: true,
+      message: 'Code de vérification envoyé sur votre adresse e-mail'
+    });
+
+  } catch (error) {
+    console.error('Erreur demande inscription:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur serveur lors de la demande d\'inscription'
+    });
+  }
+});
+
+// Validation du code et finalisation de l'inscription
+router.post('/register-verify', async (req, res) => {
+  try {
+    const { email, code } = req.body;
+
+    if (!email || !code) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email et code requis'
+      });
+    }
+
+    // Récupérer la demande de vérification
+    const [rows] = await pool.query(
+      'SELECT code, data, created_at FROM etudiant_verification WHERE email = ?',
+      [email]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Aucune demande d\'inscription trouvée pour cet e-mail'
+      });
+    }
+
+    const { code: dbCode, data: serializedData, created_at: createdAt } = rows[0];
+
+    // Vérifier si le code correspond
+    if (dbCode !== code.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Code de vérification incorrect'
+      });
+    }
+
+    // Vérifier la validité du code (15 minutes)
+    const isExpired = (Date.now() - new Date(createdAt).getTime()) > 15 * 60 * 1000;
+    if (isExpired) {
+      return res.status(410).json({
+        success: false,
+        message: 'Ce code a expiré (validité 15 minutes). Veuillez demander un nouveau code.'
+      });
+    }
+
+    // Désérialiser les informations de l'étudiant
+    const etudiant = JSON.parse(serializedData);
+
+    // Procéder à l'insertion finale dans la table etudiant
+    const [result] = await pool.query(
+      'INSERT INTO etudiant (matricule, nom, prenom, email, mot_de_passe, id_filiere, id_niveau, sexe) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      [
+        etudiant.matricule,
+        etudiant.nom,
+        etudiant.prenom,
+        etudiant.email,
+        etudiant.mot_de_passe,
+        etudiant.id_filiere,
+        etudiant.id_niveau,
+        etudiant.sexe
+      ]
+    );
+
+    // Supprimer la ligne de vérification temporaire
+    await pool.query(
+      'DELETE FROM etudiant_verification WHERE email = ?',
+      [email]
+    );
+
+    console.log('Étudiant validé et inséré avec succès, ID:', result.insertId);
+
+    res.status(201).json({
+      success: true,
+      message: 'Votre compte a été vérifié et créé avec succès !',
+      data: {
+        id: result.insertId,
+        matricule: etudiant.matricule,
+        nom: etudiant.nom,
+        prenom: etudiant.prenom,
+        email: etudiant.email
+      }
+    });
+
+  } catch (error) {
+    console.error('Erreur lors de la vérification de l\'inscription:', error);
+    
+    if (error.code === 'ER_DUP_ENTRY') {
+      return res.status(409).json({
+        success: false,
+        message: 'Le matricule ou l\'email a été utilisé par une autre session d\'inscription terminée.'
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      message: 'Erreur serveur lors de la validation du code'
     });
   }
 });

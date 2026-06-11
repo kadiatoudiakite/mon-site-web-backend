@@ -17,7 +17,19 @@ const storage = multer.diskStorage({
   },
   filename: (req, file, cb) => {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    const ext = path.extname(file.originalname).toLowerCase();
+    let ext = path.extname(file.originalname).toLowerCase();
+    
+    // Si l'extension est absente ou non-conforme, on la déduit du type MIME
+    if (!ext || !/\.(jpg|jpeg|png|gif|webp)$/i.test(ext)) {
+      const mimeToExt = {
+        'image/jpeg': '.jpg',
+        'image/jpg': '.jpg',
+        'image/png': '.png',
+        'image/gif': '.gif',
+        'image/webp': '.webp'
+      };
+      ext = mimeToExt[file.mimetype] || '.jpg';
+    }
     cb(null, 'profile-' + uniqueSuffix + ext);
   }
 });
@@ -26,14 +38,18 @@ const upload = multer({
   storage: storage,
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB max
   fileFilter: (req, file, cb) => {
-    // Accepter tous les types MIME d'image courants
+    // Accepter si le type MIME est une image courante ou si l'extension correspond
     const acceptedMimes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
-    const acceptedExts = /\.(jpg|jpeg|png|gif|webp)$/i;
-    
     const mimeOk = acceptedMimes.includes(file.mimetype);
+    
+    if (mimeOk) {
+      return cb(null, true);
+    }
+    
+    const acceptedExts = /\.(jpg|jpeg|png|gif|webp)$/i;
     const extOk = acceptedExts.test(path.extname(file.originalname));
     
-    if (mimeOk && extOk) {
+    if (extOk) {
       return cb(null, true);
     }
     
@@ -116,8 +132,8 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// Mettre à jour la photo de profil (SÉCURISÉ)
-router.put('/me/photo', verifyToken, upload.single('photo'), async (req, res) => {
+// Handler commun pour mettre à jour la photo de profil (SÉCURISÉ)
+const handlePhotoUpload = async (req, res) => {
   const etudiantId = req.user.id;
   
   try {
@@ -191,7 +207,11 @@ router.put('/me/photo', verifyToken, upload.single('photo'), async (req, res) =>
       message: error.message || "Erreur serveur lors de la mise à jour de la photo" 
     });
   }
-});
+};
+
+// Accepter PUT et POST pour compatibilité
+router.put('/me/photo', verifyToken, upload.single('photo'), handlePhotoUpload);
+router.post('/me/photo', verifyToken, upload.single('photo'), handlePhotoUpload);
 
 // Mettre à jour les informations textuelles du profil (SÉCURISÉ)
 router.put('/me', verifyToken, async (req, res) => {
