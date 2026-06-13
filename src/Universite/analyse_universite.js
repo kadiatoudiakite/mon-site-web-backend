@@ -1,73 +1,47 @@
 const express = require('express');
 const router = express.Router();
-const pool = require('../../config/db');
-const jwt = require('jsonwebtoken');
-
-// Middleware d'authentification JWT
-const authenticateToken = (req, res, next) => {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
-
-  if (!token) {
-    return res.status(401).json({ success: false, message: 'Token manquant' });
-  }
-
-  jwt.verify(token, process.env.JWT_SECRET || 'stagetrack_secret_key_2024', (err, user) => {
-    if (err) {
-      return res.status(403).json({ success: false, message: 'Token invalide' });
-    }
-    req.user = user;
-    next();
-  });
-};
+const { verifyToken } = require('../middlewares/auth');
 
 // Nouvelle route : analyse centrée étudiants
-router.get('/etudiants', authenticateToken, async (req, res) => {
+router.get('/etudiants', verifyToken, async (req, res) => {
   try {
+    const pool = req.app.get('dbPool');
     const universiteId = req.user.id;
 
     // Évolution mensuelle des inscriptions étudiants
-    const [etudiantsMois] = await pool.query(`
+    const [etudiantsMois] = await pool.execute(`
       SELECT DATE_FORMAT(e.created_at, '%b') as mois, COUNT(DISTINCT e.id) as total
       FROM etudiant e
-      JOIN candidature c ON e.id = c.id_etudiant
-      JOIN offre_stage o ON c.id_offre_stage = o.id
-      WHERE o.id_universite = ?
       GROUP BY mois
       ORDER BY FIELD(mois, 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec')
-    `, [universiteId]);
+    `);
 
     // Répartition par filière
-    const [filieres] = await pool.query(`
+    const [filieres] = await pool.execute(`
       SELECT f.nom as filiere, COUNT(DISTINCT e.id) as total
       FROM filiere f
       JOIN etudiant e ON f.id = e.id_filiere
-      JOIN candidature c ON e.id = c.id_etudiant
-      JOIN offre_stage o ON c.id_offre_stage = o.id
-      WHERE o.id_universite = ?
       GROUP BY f.id
-    `, [universiteId]);
+    `);
 
 
     // Répartition par domaine (domaine des offres auxquelles les étudiants ont candidaté)
-    const [domaines] = await pool.query(`
+    const [domaines] = await pool.execute(`
       SELECT d.nom as domaine, COUNT(DISTINCT c.id_etudiant) as total
       FROM domaine d
       JOIN offre_stage o ON d.id = o.id_domaine
       JOIN candidature c ON o.id = c.id_offre_stage
-      WHERE o.id_universite = ?
       GROUP BY d.id
-    `, [universiteId]);
+    `);
 
     // Évolution des placements étudiants (par mois)
-    const [placementsMois] = await pool.query(`
+    const [placementsMois] = await pool.execute(`
       SELECT DATE_FORMAT(c.date_candidature, '%b') as mois, COUNT(DISTINCT c.id_etudiant) as total
       FROM candidature c
-      JOIN offre_stage o ON c.id_offre_stage = o.id
-      WHERE o.id_universite = ? AND c.statut = 'Acceptée'
+      WHERE c.statut = 'Acceptée'
       GROUP BY mois
       ORDER BY FIELD(mois, 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec')
-    `, [universiteId]);
+    `);
 
     res.json({
       success: true,
@@ -86,107 +60,87 @@ router.get('/etudiants', authenticateToken, async (req, res) => {
 
 // ==================== ANALYSES POUR L'UNIVERSITÉ (FILTRÉES PAR UNIVERSITÉ) ====================
 
-router.get('/globale', authenticateToken, async (req, res) => {
+router.get('/globale', verifyToken, async (req, res) => {
   try {
+    const pool = req.app.get('dbPool');
     const universiteId = req.user.id;
 
-    // 1. ANALYSE ENTREPRISES (uniquement celles liées aux offres de cette université)
-    const [entreprises] = await pool.query(`
+    // 1. ANALYSE ENTREPRISES (toutes les entreprises du système)
+    const [entreprises] = await pool.execute(`
       SELECT 
         COUNT(DISTINCT e.id) as total,
         COUNT(DISTINCT e.domaine_id) as total_domaines
       FROM entreprise e
-      JOIN offre_stage o ON e.id = o.id_entreprise
-      WHERE o.id_universite = ?
-    `, [universiteId]);
+    `);
 
-    const [domainesEntreprise] = await pool.query(`
+    const [domainesEntreprise] = await pool.execute(`
       SELECT d.nom, COUNT(DISTINCT e.id) as count
       FROM domaine d
       JOIN entreprise e ON d.id = e.domaine_id
-      JOIN offre_stage o ON e.id = o.id_entreprise
-      WHERE o.id_universite = ?
       GROUP BY d.id
-    `, [universiteId]);
+    `);
 
-    // 2. ANALYSE ÉTUDIANTS (ceux qui ont candidaté aux offres de cette université)
-    const [etudiants] = await pool.query(`
+    // 2. ANALYSE ÉTUDIANTS (tous les étudiants inscrits sur la plateforme)
+    const [etudiants] = await pool.execute(`
       SELECT 
         COUNT(DISTINCT e.id) as total,
         SUM(CASE WHEN e.sexe = 'M' THEN 1 ELSE 0 END) as hommes,
         SUM(CASE WHEN e.sexe = 'F' THEN 1 ELSE 0 END) as femmes
       FROM etudiant e
-      JOIN candidature c ON e.id = c.id_etudiant
-      JOIN offre_stage o ON c.id_offre_stage = o.id
-      WHERE o.id_universite = ?
-    `, [universiteId]);
+    `);
 
-    const [placements] = await pool.query(`
+    const [placements] = await pool.execute(`
       SELECT COUNT(DISTINCT c.id_etudiant) as etudiants_places
       FROM candidature c
-      JOIN offre_stage o ON c.id_offre_stage = o.id
-      WHERE o.id_universite = ? AND c.statut = 'Acceptée'
-    `, [universiteId]);
+      WHERE c.statut = 'Acceptée'
+    `);
 
-    const [filieresStats] = await pool.query(`
+    const [filieresStats] = await pool.execute(`
       SELECT f.nom, COUNT(DISTINCT e.id) as total
       FROM filiere f
       JOIN etudiant e ON f.id = e.id_filiere
-      JOIN candidature c ON e.id = c.id_etudiant
-      JOIN offre_stage o ON c.id_offre_stage = o.id
-      WHERE o.id_universite = ?
       GROUP BY f.id
-    `, [universiteId]);
+    `);
 
-    // 3. ANALYSE OFFRES (offres publiées par cette université ou ses entreprises partenaires)
-    const [offres] = await pool.query(`
+    // 3. ANALYSE OFFRES (toutes les offres du système)
+    const [offres] = await pool.execute(`
       SELECT 
         COUNT(*) as total,
         SUM(CASE WHEN id_entreprise IS NOT NULL THEN 1 ELSE 0 END) as offres_entreprises,
-        SUM(CASE WHEN id_universite = ? THEN 1 ELSE 0 END) as offres_universites
+        SUM(CASE WHEN id_universite IS NOT NULL THEN 1 ELSE 0 END) as offres_universites
       FROM offre_stage
-      WHERE id_universite = ? OR id_entreprise IN (
-        SELECT id_entreprise FROM offre_stage WHERE id_universite = ?
-      )
-    `, [universiteId, universiteId, universiteId]);
+    `);
 
-    const [offresMois] = await pool.query(`
+    const [offresMois] = await pool.execute(`
       SELECT DATE_FORMAT(created_at, '%b') as mois, COUNT(*) as total
       FROM offre_stage
-      WHERE id_universite = ? OR id_entreprise IN (
-        SELECT id_entreprise FROM offre_stage WHERE id_universite = ?
-      )
       GROUP BY mois
       ORDER BY FIELD(mois, 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec')
-    `, [universiteId, universiteId]);
+    `);
 
-    // 4. ANALYSE CANDIDATURES (candidatures sur les offres de cette université)
-    const [candidaturesStats] = await pool.query(`
+    // 4. ANALYSE CANDIDATURES (toutes les candidatures du système)
+    const [candidaturesStats] = await pool.execute(`
       SELECT
         COUNT(*) as total,
         SUM(CASE WHEN c.statut = 'Acceptée' THEN 1 ELSE 0 END) as acceptes,
         SUM(CASE WHEN c.statut = 'Refusée' THEN 1 ELSE 0 END) as refuses,
         SUM(CASE WHEN c.statut IN ('En attente', 'Vue') THEN 1 ELSE 0 END) as en_attente
       FROM candidature c
-      JOIN offre_stage o ON c.id_offre_stage = o.id
-      WHERE o.id_universite = ?
-    `, [universiteId]);
+    `);
 
     const acceptanceRate = candidaturesStats[0].total > 0
       ? Math.round((candidaturesStats[0].acceptes / candidaturesStats[0].total) * 100)
       : 0;
 
-    const [candidaturesParMois] = await pool.query(`
+    const [candidaturesParMois] = await pool.execute(`
       SELECT DATE_FORMAT(c.date_candidature, '%b') as mois, COUNT(*) as total
       FROM candidature c
-      JOIN offre_stage o ON c.id_offre_stage = o.id
-      WHERE o.id_universite = ?
       GROUP BY mois
       ORDER BY FIELD(mois, 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec')
-    `, [universiteId]);
+    `);
 
     // 5. Notifications pour cette université
-    const [notificationsSummary] = await pool.query(`
+    const [notificationsSummary] = await pool.execute(`
       SELECT statut, COUNT(*) as count
       FROM notification
       WHERE id_universite = ?
@@ -235,10 +189,11 @@ router.get('/globale', authenticateToken, async (req, res) => {
 });
 
 // Récupérer toutes les candidatures avec détails pour cette université
-router.get('/candidatures-globales', authenticateToken, async (req, res) => {
+router.get('/candidatures-globales', verifyToken, async (req, res) => {
   try {
+    const pool = req.app.get('dbPool');
     const universiteId = req.user.id;
-    const [rows] = await pool.query(`
+    const [rows] = await pool.execute(`
       SELECT 
         c.id,
         c.date_candidature,
@@ -259,9 +214,8 @@ router.get('/candidatures-globales', authenticateToken, async (req, res) => {
       LEFT JOIN filiere f ON e.id_filiere = f.id
       LEFT JOIN domaine d ON o.id_domaine = d.id
       LEFT JOIN entreprise ent ON o.id_entreprise = ent.id
-      WHERE o.id_universite = ?
       ORDER BY c.date_candidature DESC
-    `, [universiteId]);
+    `);
 
     res.json({
       success: true,

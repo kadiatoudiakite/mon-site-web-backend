@@ -8,7 +8,11 @@ router.get('/unread-count', verifyToken, async (req, res) => {
     const userId = req.user.id;
     try {
         const [rows] = await pool.query(
-            `SELECT COUNT(*) as count FROM notification WHERE id_etudiant = ? AND statut = 'non_lu'`,
+            `SELECT COUNT(*) as count FROM notification 
+             WHERE (id_etudiant = ? OR target = 'all_students') AND statut = 'non_lu'
+             AND (created_by IS NULL OR created_by != 'etudiant')
+             AND (created_by_type IS NULL OR created_by_type != 'etudiant')
+             AND (target IS NULL OR target NOT IN ('entreprise', 'universite', 'all_companies', 'all_universities'))`,
             [userId]
         );
         res.json({ success: true, count: rows[0].count });
@@ -29,7 +33,10 @@ router.get('/', verifyToken, async (req, res) => {
              FROM notification n
              LEFT JOIN entreprise e ON n.id_entreprise = e.id
              LEFT JOIN universite u ON n.id_universite = u.id
-             WHERE n.id_etudiant = ?
+             WHERE (n.id_etudiant = ? OR n.target = 'all_students')
+             AND (n.created_by IS NULL OR n.created_by != 'etudiant')
+             AND (n.created_by_type IS NULL OR n.created_by_type != 'etudiant')
+             AND (n.target IS NULL OR n.target NOT IN ('entreprise', 'universite', 'all_companies', 'all_universities'))
              ORDER BY n.created_at DESC`,
             [userId]
         );
@@ -65,7 +72,11 @@ router.put('/marquer-tout-lu', verifyToken, async (req, res) => {
     const userId = req.user.id;
     try {
         await pool.query(
-            `UPDATE notification SET statut = 'lu' WHERE id_etudiant = ? AND statut = 'non_lu'`,
+            `UPDATE notification SET statut = 'lu' 
+             WHERE id_etudiant = ? AND statut = 'non_lu'
+             AND (created_by IS NULL OR created_by != 'etudiant')
+             AND (created_by_type IS NULL OR created_by_type != 'etudiant')
+             AND (target IS NULL OR target NOT IN ('entreprise', 'universite', 'all_companies', 'all_universities'))`,
             [userId]
         );
         res.json({ success: true, message: 'Toutes les notifications ont été marquées comme lues' });

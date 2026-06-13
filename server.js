@@ -52,12 +52,9 @@ app.use('/api/connexion', require('./src/Entreprise/connexionentrepriseRoutes'))
 app.use('/api/entreprises/profil', require('./src/Entreprise/profilentreprise.js'));
 app.use('/api/profil-entreprise', require('./src/Entreprise/profilentreprise.js'));
 
-// Routes Publications (IMPORTANT : une seule déclaration)
-const publicationRouter = require('./src/Entreprise/offreStageEntrepriseRouter');
 
-app.use('/api/entreprises/offres', publicationRouter);
-app.use('/api/publications', publicationRouter);   // ← Route utilisée par ton frontend
-
+app.use('/api/entreprises/offres', require('./src/Entreprise/offreStageEntrepriseRouter'));
+app.use('/api/publications', require('./src/Entreprise/offreStageEntrepriseRouter'));   
 app.use('/api/entreprises/candidatures', require('./src/Entreprise/gestionCandidatures'));
 
 // ==================== AUTRES ROUTES ====================

@@ -49,7 +49,7 @@ router.get('/organismes', async (req, res) => {
         `);
         
         const [universites] = await pool.query(`
-            SELECT id, CONCAT(prenom, ' ', nom) as nom, NULL as sigle, NULL as logo, 
+            SELECT id, CONCAT(prenom, ' ', nom) as nom, NULL as sigle, logo, 
             'Membre du corps professoral / Administration universitaire' as description, 
             'universite' as type 
             FROM universite
@@ -75,7 +75,9 @@ router.get('/:id/offres', async (req, res) => {
       SELECT 
         os.*, 
         e.nom as entreprise_nom, 
+        e.logo as entreprise_logo,
         CONCAT(u.prenom, ' ', u.nom) as universite_nom,
+        u.logo as universite_logo,
         d.nom as domaine_nom,
         (SELECT COUNT(*) FROM aime WHERE id_offre_stage = os.id) as likes_count,
         (SELECT COUNT(*) FROM commentaire WHERE id_offre_stage = os.id) as comments_count,

@@ -35,6 +35,21 @@ const authenticateToken = (req, res, next) => {
   });
 };
 
+// ====================== RÉCUPÉRER LES DOMAINES (publique) ======================
+// Cette route est volontairement publique pour permettre au frontend
+// d'afficher les domaines même si l'utilisateur n'a pas de token valide.
+router.get('/domaines', async (req, res) => {
+  try {
+    const pool = getDbPool(req);
+    const [domaines] = await pool.execute('SELECT id, nom FROM domaine ORDER BY nom');
+
+    return res.status(200).json({ success: true, data: domaines });
+  } catch (error) {
+    console.error('Erreur récupération domaines:', error);
+    return res.status(500).json({ success: false, message: 'Erreur serveur lors de la récupération des domaines' });
+  }
+});
+
 // Configuration Multer
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -173,7 +188,6 @@ router.post('/', authenticateToken, upload.single('fichier'), async (req, res) =
     for (const student of students) {
       await createStudentNotification({
         id_etudiant: student.id,
-        id_entreprise: req.user.id,
         titre: 'Nouvelle offre de stage',
         message: `${nomEntreprise} a publié une nouvelle offre : "${titre.trim()}"`,
         type: 'offre'
@@ -251,7 +265,6 @@ router.put('/:id', authenticateToken, upload.single('fichier'), async (req, res)
     for (const c of candidats) {
       await createStudentNotification({
         id_etudiant: c.id_etudiant,
-        id_entreprise: req.user.id,
         titre: 'Offre modifiée',
         message: `L'offre "${titre.trim()}" a été mise à jour.`,
         type: 'offre'
@@ -308,7 +321,6 @@ router.delete('/:id', authenticateToken, async (req, res) => {
     for (const c of candidats) {
       await createStudentNotification({
         id_etudiant: c.id_etudiant,
-        id_entreprise: req.user.id,
         titre: 'Offre supprimée',
         message: `L'offre "${offre[0].titre}" a été supprimée par ${entreprise[0]?.nom || 'l\'entreprise'}.`,
         type: 'alerte'
@@ -399,6 +411,27 @@ router.get('/:id/stats', authenticateToken, async (req, res) => {
     res.json({ success: true, data: stats[0] });
   } catch (error) {
     console.error('Erreur stats:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// Récupérer notifications pour l'étudiant connecté
+router.get('/notifications', authenticateToken, async (req, res) => {
+  try {
+    const pool = getDbPool(req);
+    const [notifications] = await pool.execute(`
+      SELECT n.*, e.nom AS entreprise_nom, u.nom AS universite_nom
+      FROM notification n
+      LEFT JOIN entreprise e ON n.id_entreprise = e.id
+      LEFT JOIN universite u ON n.id_universite = u.id
+      WHERE (n.id_etudiant = ? OR n.target = 'all_students')
+      ORDER BY n.created_at DESC
+      LIMIT 100;
+    `, [req.user.id]);
+
+    res.json({ success: true, data: notifications });
+  } catch (error) {
+    console.error('Erreur notifications:', error);
     res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 });

@@ -9,8 +9,10 @@ router.get('/', async (req, res) => {
     const [rows] = await pool.query(`
       SELECT 
         os.*, 
-        e.nom as entreprise_nom, 
+        e.nom as entreprise_nom,
+        e.logo as entreprise_logo, 
         CONCAT(u.prenom, ' ', u.nom) as universite_nom,
+        u.logo as universite_logo,
         d.nom as domaine_nom,
         (SELECT COUNT(*) FROM aime WHERE id_offre_stage = os.id) as likes_count,
         (SELECT COUNT(*) FROM commentaire WHERE id_offre_stage = os.id) as comments_count,
@@ -100,7 +102,7 @@ router.get('/:offreId/commentaires', async (req, res) => {
     const { offreId } = req.params;
     try {
         const [rows] = await pool.query(`
-            SELECT c.*, e.nom as etudiant_nom 
+            SELECT c.*, CONCAT(e.prenom, ' ', e.nom) as etudiant_nom, e.photo as etudiant_photo 
             FROM commentaire c
             JOIN etudiant e ON c.id_etudiant = e.id
             WHERE c.id_offre_stage = ?

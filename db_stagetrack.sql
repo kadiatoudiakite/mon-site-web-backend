@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Hôte : 127.0.0.1:3306
--- Généré le : dim. 17 mai 2026 à 15:50
+-- Généré le : jeu. 11 juin 2026 à 01:54
 -- Version du serveur : 8.0.31
 -- Version de PHP : 8.0.26
 
@@ -36,7 +36,7 @@ CREATE TABLE IF NOT EXISTS `aime` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `id_etudiant` (`id_etudiant`,`id_offre_stage`),
   KEY `id_offre_stage` (`id_offre_stage`)
-) ENGINE=InnoDB AUTO_INCREMENT=24 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=26 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
 -- Déchargement des données de la table `aime`
@@ -49,7 +49,9 @@ INSERT INTO `aime` (`id`, `id_etudiant`, `id_offre_stage`, `created_at`) VALUES
 (14, 1, 28, '2026-05-08 14:53:27'),
 (15, 3, 29, '2026-05-12 13:28:59'),
 (22, 1, 29, '2026-05-12 18:09:55'),
-(23, 2, 36, '2026-05-16 17:50:33');
+(23, 2, 36, '2026-05-16 17:50:33'),
+(24, 6, 39, '2026-05-18 20:43:01'),
+(25, 3, 43, '2026-06-01 12:19:03');
 
 -- --------------------------------------------------------
 
@@ -63,17 +65,16 @@ CREATE TABLE IF NOT EXISTS `candidature` (
   `id_etudiant` int NOT NULL,
   `id_offre_stage` int NOT NULL,
   `date_candidature` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
-  `date_entretien` datetime DEFAULT NULL,
-  `description_mission` text,
   `lettre_motivation` text,
   `cv_fichier` varchar(255) DEFAULT NULL,
   `statut` enum('En attente','Vue','Acceptée','Refusée') DEFAULT 'En attente',
   `commentaire_entreprise` text,
+  `date_entretien` date DEFAULT NULL,
+  `description_mission` text,
   PRIMARY KEY (`id`),
   UNIQUE KEY `id_etudiant` (`id_etudiant`,`id_offre_stage`),
   KEY `id_offre_stage` (`id_offre_stage`)
-) ENGINE=InnoDB AUTO_INCREMENT=23 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-
+) ENGINE=InnoDB AUTO_INCREMENT=38 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
 -- Déchargement des données de la table `candidature`
@@ -82,17 +83,32 @@ CREATE TABLE IF NOT EXISTS `candidature` (
 INSERT INTO `candidature` (`id`, `id_etudiant`, `id_offre_stage`, `date_candidature`, `lettre_motivation`, `cv_fichier`, `statut`, `commentaire_entreprise`, `date_entretien`, `description_mission`) VALUES
 (3, 1, 13, '2026-05-01 17:34:19', '/uploads/lettre-1777656858850-759461733.pdf', '/uploads/cv-1777656858421-303919089.pdf', 'Acceptée', NULL, NULL, NULL),
 (6, 1, 17, '2026-05-03 14:54:15', '/uploads/lettre-1777820055909-607366673.pdf', '/uploads/cv-1777820055893-191872839.pdf', 'Acceptée', NULL, NULL, NULL),
-(7, 1, 14, '2026-05-03 17:23:26', '/uploads/lettre-1777829006146-354673003.pdf', '/uploads/cv-1777829006127-587878464.pdf', 'Acceptée', 'hyttrre', '2026-05-21 00:00:00', NULL),
-(8, 1, 16, '2026-05-03 17:36:42', '/uploads/lettre-1777829802272-533236576.pdf', '/uploads/cv-1777829802254-872270813.pdf', 'Acceptée', 'yrtedggdg', '2026-05-14 00:00:00', NULL),
-(10, 1, 15, '2026-05-03 17:51:54', '/uploads/lettre-1777830714122-312498773.pdf', '/uploads/cv-1777830714105-17787303.pdf', 'Acceptée', NULL, '2026-05-27 00:00:00', NULL),
+(7, 1, 14, '2026-05-03 17:23:26', '/uploads/lettre-1777829006146-354673003.pdf', '/uploads/cv-1777829006127-587878464.pdf', 'Acceptée', 'hyttrre', '2026-05-21', NULL),
+(8, 1, 16, '2026-05-03 17:36:42', '/uploads/lettre-1777829802272-533236576.pdf', '/uploads/cv-1777829802254-872270813.pdf', 'Acceptée', 'yrtedggdg', '2026-05-14', NULL),
+(10, 1, 15, '2026-05-03 17:51:54', '/uploads/lettre-1777830714122-312498773.pdf', '/uploads/cv-1777830714105-17787303.pdf', 'Acceptée', NULL, '2026-05-27', NULL),
 (11, 1, 21, '2026-05-05 09:45:46', '/uploads/lettre-1777974346630-709300760.pdf', '/uploads/cv-1777974346628-91298558.pdf', 'Acceptée', NULL, NULL, NULL),
 (16, 4, 27, '2026-05-08 13:31:10', '/uploads/lettre-1778247069499-513742334.pdf', '/uploads/cv-1778247068114-653777531.pdf', 'Acceptée', NULL, NULL, NULL),
-(17, 3, 29, '2026-05-12 13:29:37', '/uploads/lettre-1778592576859-617081168.pdf', '/uploads/cv-1778592576427-528111860.pdf', 'Acceptée', 'DYQFYUVEZT', '2026-05-12 00:00:00', NULL),
+(17, 3, 29, '2026-05-12 13:29:37', '/uploads/lettre-1778592576859-617081168.pdf', '/uploads/cv-1778592576427-528111860.pdf', 'Acceptée', 'DYQFYUVEZT', '2026-05-12', NULL),
 (18, 1, 26, '2026-05-12 18:19:01', '/uploads/lettre-1778609940954-115063156.pdf', '/uploads/cv-1778609940486-821805299.pdf', 'Acceptée', NULL, NULL, NULL),
-(19, 2, 28, '2026-05-16 15:31:32', '/uploads/lettre-1778945492502-567916253.pdf', '/uploads/cv-1778945492297-480918871.pdf', 'En attente', NULL, NULL, NULL),
-(20, 2, 37, '2026-05-17 12:59:01', '/uploads/lettre-1779022741022-304384289.pdf', '/uploads/cv-1779022740779-51145045.pdf', 'Acceptée', 'GJJVGIU', '2026-05-24 00:00:00', NULL),
+(19, 2, 28, '2026-05-16 15:31:32', '/uploads/lettre-1778945492502-567916253.pdf', '/uploads/cv-1778945492297-480918871.pdf', 'Vue', NULL, NULL, NULL),
+(20, 2, 37, '2026-05-17 12:59:01', '/uploads/lettre-1779022741022-304384289.pdf', '/uploads/cv-1779022740779-51145045.pdf', 'Acceptée', 'GJJVGIU', '2026-05-24', NULL),
 (21, 2, 38, '2026-05-17 14:22:40', '/uploads/lettre-1779027759958-315882513.pdf', '/uploads/cv-1779027759702-314506359.pdf', 'Refusée', 'ssghxer', NULL, NULL),
-(22, 2, 15, '2026-05-17 15:47:03', '/uploads/lettre-1779032822933-856925705.pdf', '/uploads/cv-1779032822602-373247549.pdf', 'En attente', NULL, NULL, NULL);
+(22, 2, 15, '2026-05-17 15:47:03', '/uploads/lettre-1779032822933-856925705.pdf', '/uploads/cv-1779032822602-373247549.pdf', 'Acceptée', 'fgbegx', '2026-05-17', NULL),
+(23, 5, 38, '2026-05-18 20:03:18', '/uploads/lettre-1779134598176-257177780.pdf', '/uploads/cv-1779134598171-656599602.pdf', 'Refusée', 'dtyvduyrvyvscs', NULL, NULL),
+(24, 6, 34, '2026-05-18 20:35:56', '/uploads/lettre-1779136556765-282745880.pdf', '/uploads/cv-1779136556755-174980320.pdf', 'Vue', NULL, NULL, NULL),
+(25, 6, 31, '2026-05-18 20:38:13', '/uploads/lettre-1779136693581-472237443.pdf', '/uploads/cv-1779136693564-974101379.pdf', 'En attente', NULL, NULL, NULL),
+(26, 6, 39, '2026-05-18 20:43:18', '/uploads/lettre-1779136998943-902425852.pdf', '/uploads/cv-1779136998929-695467490.pdf', 'Vue', NULL, NULL, NULL),
+(27, 2, 40, '2026-05-22 18:57:50', '/uploads/lettre-1779476270866-853290616.pdf', '/uploads/cv-1779476270848-9115637.pdf', 'Refusée', NULL, NULL, NULL),
+(28, 2, 41, '2026-05-22 19:06:19', '/uploads/lettre-1779476779349-631994440.pdf', '/uploads/cv-1779476779322-255931543.pdf', 'Acceptée', NULL, NULL, NULL),
+(29, 3, 42, '2026-05-22 19:07:10', '/uploads/lettre-1779476830277-992638066.pdf', '/uploads/cv-1779476830248-752711550.pdf', 'Acceptée', NULL, NULL, NULL),
+(30, 5, 42, '2026-05-22 19:56:59', '/uploads/lettre-1779479819003-376694404.pdf', '/uploads/cv-1779479818994-182947405.pdf', 'Acceptée', NULL, NULL, NULL),
+(31, 6, 41, '2026-05-22 20:12:39', '/uploads/lettre-1779480759344-726864062.pdf', '/uploads/cv-1779480759331-460172681.pdf', 'Refusée', NULL, NULL, NULL),
+(32, 1, 42, '2026-05-22 20:43:17', '/uploads/lettre-1779482597355-716720580.pdf', '/uploads/cv-1779482597335-937893659.pdf', 'Vue', NULL, NULL, NULL),
+(33, 1, 43, '2026-06-01 11:54:01', '/uploads/lettre-1780314841118-132338822.pdf', '/uploads/cv-1780314841107-314894197.pdf', 'En attente', NULL, NULL, NULL),
+(34, 2, 43, '2026-06-01 11:55:19', '/uploads/lettre-1780314919113-338263899.pdf', '/uploads/cv-1780314919087-215141448.pdf', 'En attente', NULL, NULL, NULL),
+(35, 3, 43, '2026-06-01 12:16:56', '/uploads/lettre-1780316216961-737859136.pdf', '/uploads/cv-1780316216951-75935584.pdf', 'En attente', NULL, NULL, NULL),
+(36, 6, 40, '2026-06-01 12:50:56', '/uploads/lettre-1780318256129-720406280.pdf', '/uploads/cv-1780318256115-718053448.pdf', 'En attente', NULL, NULL, NULL),
+(37, 6, 43, '2026-06-01 12:51:46', '/uploads/lettre-1780318306083-369521326.pdf', '/uploads/cv-1780318306074-416158842.pdf', 'Vue', NULL, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -112,7 +128,7 @@ CREATE TABLE IF NOT EXISTS `commentaire` (
   KEY `idx_commentaire_offre` (`id_offre_stage`),
   KEY `idx_commentaire_entreprise` (`id_entreprise`),
   KEY `idx_commentaire_etudiant` (`id_etudiant`)
-) ENGINE=InnoDB AUTO_INCREMENT=15 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=16 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
 -- Déchargement des données de la table `commentaire`
@@ -126,7 +142,8 @@ INSERT INTO `commentaire` (`id`, `id_etudiant`, `id_entreprise`, `id_offre_stage
 (9, 1, NULL, 28, 'Cool', '2026-05-08 14:53:45'),
 (11, 1, NULL, 28, 'Cool Mr sacko', '2026-05-08 15:10:07'),
 (12, 3, NULL, 29, 'Merci à vous', '2026-05-12 13:29:13'),
-(13, 1, NULL, 29, 'Merci à vous', '2026-05-12 18:13:29');
+(13, 1, NULL, 29, 'Merci à vous', '2026-05-12 18:13:29'),
+(15, 3, NULL, 43, 'Intéressé', '2026-06-01 12:19:20');
 
 -- --------------------------------------------------------
 
@@ -154,9 +171,6 @@ INSERT INTO `conversation` (`id`, `id_entreprise`, `id_universite`, `created_at`
 (4, 24, 4, '2026-05-08 16:15:40'),
 (5, 24, 5, '2026-05-08 16:20:52'),
 (7, 23, 5, '2026-05-08 19:43:15'),
-(8, 24, 14, '2026-05-08 19:45:26'),
-(9, 24, 7, '2026-05-08 19:45:34'),
-(10, 24, 13, '2026-05-08 19:45:50'),
 (11, 25, 4, '2026-05-12 16:30:34'),
 (12, 27, 4, '2026-05-12 17:51:35');
 
@@ -180,7 +194,7 @@ CREATE TABLE IF NOT EXISTS `demande_partenariat` (
   PRIMARY KEY (`id`),
   KEY `id_universite` (`id_universite`),
   KEY `fk_dp_entreprise` (`id_entreprise`)
-) ENGINE=InnoDB AUTO_INCREMENT=22 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=26 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
 -- Déchargement des données de la table `demande_partenariat`
@@ -190,7 +204,11 @@ INSERT INTO `demande_partenariat` (`id`, `nom_entreprise`, `email_entreprise`, `
 (18, 'makossa', 'sfks@gmail.com', 'Santé', 'ksjhjfjlsfjlsjflkqdsjflqks', NULL, 4, 'Acceptée', '2026-05-12 16:26:24'),
 (19, 'SDKJFG', 'DSJKFG@gmail.com', 'Éducation', 'jsddfqlskdjfncvxwdf', NULL, 4, 'Acceptée', '2026-05-12 16:53:39'),
 (20, 'fally', 'baldeoumoufally14@gmail.com', 'Santé', 'je suis balde oumou fally', NULL, 4, 'Acceptée', '2026-05-12 17:00:08'),
-(21, 'diakitetechno', 'diakite@gmail.com', 'Banque & Finance', 'ezlurta\"\'uetvzr\"eqq', NULL, 5, 'Acceptée', '2026-05-16 14:20:29');
+(21, 'diakitetechno', 'diakite@gmail.com', 'Banque & Finance', 'ezlurta\"\'uetvzr\"eqq', NULL, 5, 'Acceptée', '2026-05-16 14:20:29'),
+(22, 'bintatechnologie', 'binta@gmail.com', 'Banque & Finance', 'cjhfgdsutfyuuuuuezaq', 23, 5, 'En attente', '2026-05-22 18:08:05'),
+(23, 'sfqsf', 'sackosdf@gmail.com', 'Banque & Finance', 'sm:ljsqldfjqs', NULL, 4, 'Acceptée', '2026-05-23 12:52:09'),
+(24, 'sdf', 'ibktechcenter@gmail.com', 'Éducation', 'sqfsdfqs', NULL, 4, 'Acceptée', '2026-06-04 05:02:44'),
+(25, 'bintatech', 'bintatech@gmail.com', 'Informatique / IT', 'k;dsjfhreiuqnsdlcn dhfb', NULL, 4, 'Acceptée', '2026-06-04 13:27:36');
 
 -- --------------------------------------------------------
 
@@ -211,9 +229,7 @@ CREATE TABLE IF NOT EXISTS `departement` (
 --
 
 INSERT INTO `departement` (`id`, `nom`, `created_at`) VALUES
-(1, 'Informatique', '2026-04-24 13:28:52'),
-(2, 'Gestion', '2026-04-24 13:28:52'),
-(3, 'Réseaux et Télécommunications', '2026-04-24 13:28:52');
+(1, 'GIT', '2026-04-24 13:28:52');
 
 -- --------------------------------------------------------
 
@@ -248,13 +264,10 @@ INSERT INTO `domaine` (`id`, `nom`) VALUES
 (13, 'Réseaux et Télécommunications'),
 (14, 'Support et Maintenance Informatique'),
 (15, 'UX/UI Design'),
-(16, 'Informatique'),
 (17, 'Marketing'),
 (18, 'Finance'),
 (19, 'Ressources Humaines'),
 (20, 'Ingénierie'),
-(21, 'Santé'),
-(22, 'Éducation'),
 (23, 'Informatique'),
 (24, 'Marketing'),
 (25, 'Finance'),
@@ -303,7 +316,7 @@ CREATE TABLE IF NOT EXISTS `entreprise` (
   UNIQUE KEY `email` (`email`),
   KEY `domaine_id` (`domaine_id`),
   KEY `id_universite` (`id_universite`)
-) ENGINE=InnoDB AUTO_INCREMENT=29 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=39 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
 -- Déchargement des données de la table `entreprise`
@@ -317,7 +330,12 @@ INSERT INTO `entreprise` (`id`, `nom`, `sigle`, `logo`, `commune`, `quartier`, `
 (25, 'makossa', NULL, NULL, NULL, NULL, NULL, 'sfks@gmail.com', 'p8kNMQ9lUAc0', NULL, 28, 4, '2026-05-12 16:29:01'),
 (26, 'SDKJFG', NULL, NULL, NULL, NULL, NULL, 'dsjkfg@gmail.com', 'Xekznll@Ltpi', NULL, 36, 4, '2026-05-12 16:54:25'),
 (27, 'fally', NULL, NULL, NULL, NULL, NULL, 'baldeoumoufally14@gmail.com', 'RlTj6N7rSLEF', NULL, 28, 4, '2026-05-12 17:00:36'),
-(28, 'diakitetechno', NULL, NULL, NULL, NULL, NULL, 'diakite@gmail.com', 'ckPfo5xGlwgo', NULL, 32, 5, '2026-05-16 14:29:33');
+(28, 'diakitetechno', NULL, NULL, NULL, NULL, NULL, 'diakite@gmail.com', 'ckPfo5xGlwgo', NULL, 32, 5, '2026-05-16 14:29:33'),
+(29, 'sfqsf', NULL, NULL, NULL, NULL, NULL, 'sackosdf@gmail.com', 'ZjsHHSteKvxT', NULL, 18, 4, '2026-05-23 12:53:11'),
+(34, 'makossaddd', NULL, NULL, NULL, NULL, NULL, 'ibktechcentedr@gmail.com', 'KCfdWxsWuxI#', NULL, 25, 4, '2026-06-04 04:57:43'),
+(36, 'sdf', NULL, NULL, NULL, NULL, NULL, 'ibktechcenter@gmail.com', 'e1wzaK1Ik3W#', NULL, 43, 4, '2026-06-04 05:03:05'),
+(37, 'bintatech', NULL, NULL, NULL, NULL, NULL, 'bintatech@gmail.com', 'wffXEqbQS0s2', NULL, 23, 4, '2026-06-04 13:28:09'),
+(38, 'kaiditech', NULL, NULL, NULL, NULL, NULL, 'kadiatoudiakitou@gmail.com', 'c1eVVN6Z86Oh', NULL, 36, 4, '2026-06-04 13:31:23');
 
 -- --------------------------------------------------------
 
@@ -348,17 +366,22 @@ CREATE TABLE IF NOT EXISTS `etudiant` (
   UNIQUE KEY `email` (`email`),
   KEY `id_filiere` (`id_filiere`),
   KEY `id_niveau` (`id_niveau`)
-) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=10 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
 -- Déchargement des données de la table `etudiant`
 --
 
 INSERT INTO `etudiant` (`id`, `matricule`, `nom`, `prenom`, `sexe`, `telephone`, `email`, `mot_de_passe`, `commune`, `quartier`, `nom_pere`, `nom_mere`, `id_filiere`, `created_at`, `photo`, `id_niveau`) VALUES
-(1, '212002', 'Makossa', 'Makos', 'M', NULL, 'sacko@gmail.com', 'Dymama', NULL, NULL, NULL, NULL, 1, '2026-05-01 01:08:30', '/uploads/profiles/profile-1777986761525-339856548.jpeg', 3),
-(2, '2200307', 'Diakité ', 'Kadiatou ', 'F', NULL, 'diza@gmail.com', 'Diza2025@', NULL, NULL, NULL, NULL, 1, '2026-05-05 13:09:20', '/uploads/profiles/profile-1778002799895-867133115.jpeg', 1),
-(3, '2200306', 'Barry ', 'Oumou', 'F', '6222222', 'oumou@gmail.com', 'Barry@', 'Mat', 'Sang', 'Tere', 'Mere', 2, '2026-05-06 21:39:49', '/uploads/profiles/profile-1778103693810-148014769.jpeg', 2),
-(4, '2200300', 'Baldé', 'Oumou', 'F', NULL, 'oumoubarryaissatou@gmail.com', '1234567', NULL, NULL, NULL, NULL, 1, '2026-05-08 12:22:50', NULL, 1);
+(1, '212002', 'Makossa', 'Makos', 'M', NULL, 'sacko@gmail.com', 'Dymama', NULL, NULL, NULL, NULL, 1, '2026-05-01 01:08:30', 'uploads/profiles/profile-1777986761525-339856548.jpeg', 3),
+(2, '2200307', 'Diakité ', 'Kadiatou ', 'F', NULL, 'diza@gmail.com', 'Diza2025@', NULL, NULL, NULL, NULL, 1, '2026-05-05 13:09:20', 'uploads/profiles/profile-1778002799895-867133115.jpeg', 1),
+(3, '2200306', 'Barry ', 'Oumou', 'F', '6222222', 'oumou@gmail.com', 'Barry@', 'Mat', 'Sang', 'Tere', 'Mere', 2, '2026-05-06 21:39:49', 'uploads/profiles/profile-1778103693810-148014769.jpeg', 2),
+(4, '2200300', 'Baldé', 'Oumou', 'F', NULL, 'oumoubarryaissatou@gmail.com', '1234567', NULL, NULL, NULL, NULL, 1, '2026-05-08 12:22:50', NULL, 1),
+(5, '2100234', 'Diallo', 'Oumar', 'M', '621301230', 'oumar12@gmail.com', 'Oumar123', 'Ratoma', 'Ratoma', 'Minka', 'Djalika', 1, '2026-05-18 20:01:09', 'uploads/profiles/profile-1779134646891-240447739.jpeg', 1),
+(6, '2300456', 'Bah', 'Tima', 'F', '623841202', 'tima@gmail.com', 'Tima123', 'M', 'Q', 'Mn', 'Mm', 1, '2026-05-18 20:35:04', '/uploads/profiles/profile-1780317604646-929291637.jpeg', 1),
+(7, '2200432', '', '', 'M', '620365241', 'sadou@gmail.com', 'Sadou123', 'Matam', 'Kenien', 'Mamady ', 'Fanta ', 1, '2026-06-01 13:03:53', NULL, 1),
+(8, '2346709', 'Sy ', 'Ramatoulaye ', 'F', NULL, 'rama@gmail.com', 'Rama123', NULL, NULL, NULL, NULL, 1, '2026-06-01 13:22:54', NULL, 1),
+(9, '2134568', 'Sow', 'Ibrahima ', 'M', NULL, 'ib@gmail.com', 'Ib123@', NULL, NULL, NULL, NULL, 1, '2026-06-01 14:00:46', NULL, 1);
 
 -- --------------------------------------------------------
 
@@ -374,18 +397,17 @@ CREATE TABLE IF NOT EXISTS `filiere` (
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   KEY `departement_id` (`departement_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
 -- Déchargement des données de la table `filiere`
 --
 
 INSERT INTO `filiere` (`id`, `nom`, `departement_id`, `created_at`) VALUES
-(1, 'Développement Web', 1, '2026-04-24 13:28:52'),
-(2, 'Base de Données', 1, '2026-04-24 13:28:52'),
-(3, 'Comptabilité', 2, '2026-04-24 13:28:52'),
-(4, 'Finance', 2, '2026-04-24 13:28:52'),
-(5, 'Administration Réseaux', 3, '2026-04-24 13:28:52');
+(1, 'Génie Logicielle', 1, '2026-04-24 13:28:52'),
+(2, 'Miage', 1, '2026-04-24 13:28:52'),
+(8, 'Reseau & Télecom', 1, '2026-05-23 15:58:10'),
+(10, 'Génie Civil', 1, '2026-05-23 15:59:12');
 
 -- --------------------------------------------------------
 
@@ -404,7 +426,7 @@ CREATE TABLE IF NOT EXISTS `message` (
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   KEY `conversation_id` (`conversation_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=23 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=27 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
 -- Déchargement des données de la table `message`
@@ -428,9 +450,13 @@ INSERT INTO `message` (`id`, `conversation_id`, `expediteur_type`, `contenu`, `f
 (17, 11, 'UNIVERSITE', 'oui', NULL, 1, '2026-05-12 16:31:17'),
 (18, 12, 'ENTREPRISE', 'jh', NULL, 1, '2026-05-12 17:51:40'),
 (19, 1, 'ENTREPRISE', 'SALUT', NULL, 1, '2026-05-17 12:53:06'),
-(20, 7, 'ENTREPRISE', 'RJRTCYE', NULL, 0, '2026-05-17 13:03:41'),
+(20, 7, 'ENTREPRISE', 'RJRTCYE', NULL, 1, '2026-05-17 13:03:41'),
 (21, 1, 'UNIVERSITE', 'vs allez bien', NULL, 1, '2026-05-17 13:06:34'),
-(22, 1, 'ENTREPRISE', 'oui', NULL, 0, '2026-05-17 14:27:03');
+(22, 1, 'ENTREPRISE', 'oui', NULL, 1, '2026-05-17 14:27:03'),
+(23, 1, 'UNIVERSITE', 'salut ça va', NULL, 1, '2026-05-18 19:14:12'),
+(24, 1, 'ENTREPRISE', 'oui et toi', NULL, 1, '2026-05-18 19:15:31'),
+(25, 5, 'UNIVERSITE', 'salut', NULL, 1, '2026-06-04 13:13:09'),
+(26, 4, 'UNIVERSITE', 'salut cest comment', NULL, 1, '2026-06-04 13:17:44');
 
 -- --------------------------------------------------------
 
@@ -476,7 +502,7 @@ CREATE TABLE IF NOT EXISTS `notification` (
   KEY `id_universite` (`id_universite`),
   KEY `id_entreprise` (`id_entreprise`),
   KEY `idx_notification_id_etudiant` (`id_etudiant`)
-) ENGINE=MyISAM AUTO_INCREMENT=41 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=MyISAM AUTO_INCREMENT=132 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
 -- Déchargement des données de la table `notification`
@@ -500,7 +526,98 @@ INSERT INTO `notification` (`id`, `id_universite`, `id_entreprise`, `titre`, `me
 (37, NULL, 23, 'Décision sur candidature', 'slfks a marqué la candidature de Diakité  Kadiatou  (hx\'ryhyh\'fzs) comme \"Refusée\".', 'candidature', 'lu', '2026-05-17 14:24:49', 2),
 (38, NULL, 23, 'Mise à jour de votre candidature', 'Votre candidature pour \"hx\'ryhyh\'fzs\" chez slfks a été mise à jour : Statut \"Refusée\".', 'candidature', 'lu', '2026-05-17 14:24:49', 2),
 (39, 4, 23, 'Nouveau message reçu', 'slfks vous a envoyé un message : \"oui\"', 'message', 'lu', '2026-05-17 14:27:03', NULL),
-(40, NULL, 23, 'Nouvelle candidature reçue', 'Diakité  Kadiatou  a postulé pour le poste : TTTTTTHKDK', 'candidature', 'non_lu', '2026-05-17 15:47:03', 2);
+(40, NULL, 23, 'Nouvelle candidature reçue', 'Diakité  Kadiatou  a postulé pour le poste : TTTTTTHKDK', 'candidature', 'lu', '2026-05-17 15:47:03', 2),
+(41, NULL, 23, 'Candidature consultée', 'Votre candidature pour \"TTTTTTHKDK\" a été vue par slfks.', 'candidature', 'lu', '2026-05-17 16:17:17', 2),
+(42, NULL, 23, 'Candidature acceptée 🎉', 'Félicitations ! Votre candidature pour \"TTTTTTHKDK\" a été acceptée par slfks.', 'candidature', 'lu', '2026-05-17 16:17:31', 2),
+(43, NULL, 23, 'Rapport évalué par l\'entreprise 📝', 'slfks a mis à jour le statut de votre rapport \"Jdhdj\" à \"corriger\".', 'alerte', 'lu', '2026-05-17 16:19:22', 2),
+(44, NULL, 23, 'Rapport évalué par l\'entreprise 📝', 'slfks a mis à jour le statut de votre rapport \"Jdhdj\" à \"corriger\".', 'alerte', 'lu', '2026-05-17 16:20:06', 2),
+(45, NULL, 23, 'Rapport évalué par l\'entreprise 📝', 'slfks a mis à jour le statut de votre rapport \"Jdhdjejjejj\" à \"valide\".', 'alerte', 'lu', '2026-05-17 16:39:36', 2),
+(46, NULL, 23, 'Rapport évalué par l\'entreprise 📝', 'slfks a mis à jour le statut de votre rapport \"Dnjduue\" à \"corriger\".', 'alerte', 'lu', '2026-05-17 17:31:41', 2),
+(47, NULL, 23, 'Rapport évalué par l\'entreprise 📝', 'slfks a mis à jour le statut de votre rapport \"Dnjduue\" à \"valide\".', 'alerte', 'lu', '2026-05-17 17:44:49', 2),
+(48, 4, 23, 'Nouveau message reçu', 'Super Admin vous a envoyé un message : \"salut ça va\"', 'message', 'lu', '2026-05-18 19:14:12', NULL),
+(49, 4, 23, 'Nouveau message reçu', 'slfks vous a envoyé un message : \"oui et toi\"', 'message', 'lu', '2026-05-18 19:15:31', NULL),
+(50, NULL, 23, 'Nouvelle candidature reçue', 'Diallo Oumar a postulé pour le poste : hx\'ryhyh\'fzs', 'candidature', 'lu', '2026-05-18 20:03:18', 5),
+(51, NULL, 23, 'Candidature consultée', 'Votre candidature pour \"hx\'ryhyh\'fzs\" a été vue par slfks.', 'candidature', 'lu', '2026-05-18 20:11:22', 5),
+(52, NULL, 23, 'Candidature refusée', 'Votre candidature pour \"hx\'ryhyh\'fzs\" a malheureusement été refusée par slfks.', 'candidature', 'lu', '2026-05-18 20:11:46', 5),
+(53, NULL, 23, 'Nouvelle candidature reçue', 'Bah Tima a postulé pour le poste : rsssstcrce\'tc(cub', 'candidature', 'lu', '2026-05-18 20:35:56', 6),
+(54, NULL, 24, 'Nouvelle candidature reçue', 'Bah Tima a postulé pour le poste : tu es malade', 'candidature', 'lu', '2026-05-18 20:38:13', 6),
+(55, NULL, 23, 'Candidature consultée', 'Votre candidature pour \"rsssstcrce\'tc(cub\" a été vue par slfks.', 'candidature', 'lu', '2026-05-18 20:40:04', 6),
+(56, NULL, 23, 'Nouvelle opportunité de stage !', 'slfks a publié une nouvelle offre : \"xrtejyetzeqqeqj\"', 'offre', 'lu', '2026-05-18 20:41:20', 1),
+(57, NULL, 23, 'Nouvelle opportunité de stage !', 'slfks a publié une nouvelle offre : \"xrtejyetzeqqeqj\"', 'offre', 'lu', '2026-05-18 20:41:20', 2),
+(58, NULL, 23, 'Nouvelle opportunité de stage !', 'slfks a publié une nouvelle offre : \"xrtejyetzeqqeqj\"', 'offre', 'lu', '2026-05-18 20:41:20', 4),
+(59, NULL, 23, 'Nouvelle opportunité de stage !', 'slfks a publié une nouvelle offre : \"xrtejyetzeqqeqj\"', 'offre', 'lu', '2026-05-18 20:41:20', 5),
+(60, NULL, 23, 'Nouvelle opportunité de stage !', 'slfks a publié une nouvelle offre : \"xrtejyetzeqqeqj\"', 'offre', 'lu', '2026-05-18 20:41:20', 6),
+(61, NULL, 23, 'Nouvelle opportunité de stage !', 'slfks a publié une nouvelle offre : \"xrtejyetzeqqeqj\"', 'offre', 'lu', '2026-05-18 20:41:20', 3),
+(62, NULL, 23, 'Nouvelle candidature reçue', 'Bah Tima a postulé pour le poste : xrtejyetzeqqeqj', 'candidature', 'lu', '2026-05-18 20:43:18', 6),
+(63, 5, 23, 'Nouvelle demande de partenariat', 'L\'entreprise bintatechnologie souhaite établir un partenariat avec UNC - Université Gamal Abdel Nasser de Conakry.', 'partenariat', 'lu', '2026-05-22 18:08:06', NULL),
+(64, 5, 23, 'Demande de partenariat envoyée', 'Votre demande à UNC - Université Gamal Abdel Nasser de Conakry a bien été envoyée. Vous recevrez une réponse dès que l\'université aura traité votre demande.', 'partenariat', 'lu', '2026-05-22 18:08:06', NULL),
+(65, 4, NULL, 'Nouveau stage à l\'université 💼', 'Votre université a publié un nouveau stage : \"dsjgdfeyrrr\"', 'offre', 'lu', '2026-05-22 18:55:40', 1),
+(66, 4, NULL, 'Nouveau stage à l\'université 💼', 'Votre université a publié un nouveau stage : \"dsjgdfeyrrr\"', 'offre', 'lu', '2026-05-22 18:55:40', 2),
+(67, 4, NULL, 'Nouveau stage à l\'université 💼', 'Votre université a publié un nouveau stage : \"dsjgdfeyrrr\"', 'offre', 'lu', '2026-05-22 18:55:40', 4),
+(68, 4, NULL, 'Nouveau stage à l\'université 💼', 'Votre université a publié un nouveau stage : \"dsjgdfeyrrr\"', 'offre', 'lu', '2026-05-22 18:55:40', 5),
+(69, 4, NULL, 'Nouveau stage à l\'université 💼', 'Votre université a publié un nouveau stage : \"dsjgdfeyrrr\"', 'offre', 'lu', '2026-05-22 18:55:40', 6),
+(70, 4, NULL, 'Nouveau stage à l\'université 💼', 'Votre université a publié un nouveau stage : \"dsjgdfeyrrr\"', 'offre', 'lu', '2026-05-22 18:55:40', 3),
+(71, 4, NULL, 'Nouvelle candidature reçue', 'Diakité  Kadiatou  a postulé pour le poste : dsjgdfeyrrr', 'candidature', 'lu', '2026-05-22 18:57:50', 2),
+(72, 4, NULL, 'Mise à jour de votre candidature', 'Votre candidature pour le poste \"dsjgdfeyrrr\" chez Super Admin a été mise à jour : Statut \"Refusée\".', 'candidature', 'lu', '2026-05-22 18:58:33', 2),
+(73, 4, NULL, 'Nouveau stage à l\'université 💼', 'Votre université a publié un nouveau stage : \"JHJDSTYEYQTERY\"', 'offre', 'lu', '2026-05-22 19:04:34', 1),
+(74, 4, NULL, 'Nouveau stage à l\'université 💼', 'Votre université a publié un nouveau stage : \"JHJDSTYEYQTERY\"', 'offre', 'lu', '2026-05-22 19:04:34', 2),
+(75, 4, NULL, 'Nouveau stage à l\'université 💼', 'Votre université a publié un nouveau stage : \"JHJDSTYEYQTERY\"', 'offre', 'lu', '2026-05-22 19:04:34', 4),
+(76, 4, NULL, 'Nouveau stage à l\'université 💼', 'Votre université a publié un nouveau stage : \"JHJDSTYEYQTERY\"', 'offre', 'lu', '2026-05-22 19:04:34', 5),
+(77, 4, NULL, 'Nouveau stage à l\'université 💼', 'Votre université a publié un nouveau stage : \"JHJDSTYEYQTERY\"', 'offre', 'lu', '2026-05-22 19:04:34', 6),
+(78, 4, NULL, 'Nouveau stage à l\'université 💼', 'Votre université a publié un nouveau stage : \"JHJDSTYEYQTERY\"', 'offre', 'lu', '2026-05-22 19:04:34', 3),
+(79, 4, NULL, 'Nouveau stage à l\'université 💼', 'Votre université a publié un nouveau stage : \"UIESTRCETZIFFIYVYERU\"', 'offre', 'lu', '2026-05-22 19:05:16', 1),
+(80, 4, NULL, 'Nouveau stage à l\'université 💼', 'Votre université a publié un nouveau stage : \"UIESTRCETZIFFIYVYERU\"', 'offre', 'lu', '2026-05-22 19:05:16', 2),
+(81, 4, NULL, 'Nouveau stage à l\'université 💼', 'Votre université a publié un nouveau stage : \"UIESTRCETZIFFIYVYERU\"', 'offre', 'lu', '2026-05-22 19:05:16', 4),
+(82, 4, NULL, 'Nouveau stage à l\'université 💼', 'Votre université a publié un nouveau stage : \"UIESTRCETZIFFIYVYERU\"', 'offre', 'lu', '2026-05-22 19:05:16', 5),
+(83, 4, NULL, 'Nouveau stage à l\'université 💼', 'Votre université a publié un nouveau stage : \"UIESTRCETZIFFIYVYERU\"', 'offre', 'lu', '2026-05-22 19:05:16', 6),
+(84, 4, NULL, 'Nouveau stage à l\'université 💼', 'Votre université a publié un nouveau stage : \"UIESTRCETZIFFIYVYERU\"', 'offre', 'lu', '2026-05-22 19:05:16', 3),
+(85, 4, NULL, 'Nouvelle candidature reçue', 'Diakité  Kadiatou  a postulé pour le poste : JHJDSTYEYQTERY', 'candidature', 'lu', '2026-05-22 19:06:19', 2),
+(86, 4, NULL, 'Nouvelle candidature reçue', 'Barry  Oumou a postulé pour le poste : UIESTRCETZIFFIYVYERU', 'candidature', 'lu', '2026-05-22 19:07:10', 3),
+(87, 4, NULL, 'Mise à jour de votre candidature', 'Votre candidature pour le poste \"UIESTRCETZIFFIYVYERU\" chez Super Admin a été mise à jour : Statut \"Acceptée\".', 'candidature', 'lu', '2026-05-22 19:07:50', 3),
+(88, 4, NULL, 'Mise à jour de votre candidature', 'Votre candidature pour le poste \"JHJDSTYEYQTERY\" chez Super Admin a été mise à jour : Statut \"Acceptée\".', 'candidature', 'lu', '2026-05-22 19:07:54', 2),
+(89, 4, NULL, 'Nouvelle candidature reçue', 'Diallo Oumar a postulé pour le poste : UIESTRCETZIFFIYVYERU', 'candidature', 'lu', '2026-05-22 19:56:59', 5),
+(90, 4, NULL, 'Mise à jour de votre candidature', 'Votre candidature pour le poste \"UIESTRCETZIFFIYVYERU\" chez Super Admin a été mise à jour : Statut \"Acceptée\".', 'candidature', 'lu', '2026-05-22 20:06:13', 5),
+(91, 4, NULL, 'Nouvelle candidature reçue', 'Bah Tima a postulé pour le poste : JHJDSTYEYQTERY', 'candidature', 'lu', '2026-05-22 20:12:39', 6),
+(92, 4, NULL, 'Mise à jour de votre candidature', 'Votre candidature pour le poste \"JHJDSTYEYQTERY\" chez Super Admin a été mise à jour : Statut \"Refusée\".', 'candidature', 'lu', '2026-05-22 20:35:23', 6),
+(93, 4, NULL, 'Nouvelle candidature reçue', 'Makossa Makos a postulé pour le poste : UIESTRCETZIFFIYVYERU', 'candidature', 'lu', '2026-05-22 20:43:17', 1),
+(94, 4, NULL, 'Candidature consultée', 'Votre candidature pour \"UIESTRCETZIFFIYVYERU\" a été vue par Super Admin.', 'candidature', 'lu', '2026-05-22 20:43:58', 1),
+(95, 4, NULL, 'Nouvelle demande de partenariat', 'L\'entreprise sfqsf a soumis une demande de partenariat.', 'partenariat', 'lu', '2026-05-23 12:52:09', NULL),
+(96, NULL, 23, 'Candidature consultée', 'Votre candidature pour \"xrtejyetzeqqeqj\" a été vue par slfks.', 'candidature', 'lu', '2026-05-23 17:19:15', 6),
+(97, NULL, 23, 'Nouvelle opportunité de stage !', 'slfks a publié une nouvelle offre : \"qsdrftgyhuj\"', 'offre', 'lu', '2026-06-01 11:49:53', 1),
+(98, NULL, 23, 'Nouvelle opportunité de stage !', 'slfks a publié une nouvelle offre : \"qsdrftgyhuj\"', 'offre', 'lu', '2026-06-01 11:49:53', 2),
+(99, NULL, 23, 'Nouvelle opportunité de stage !', 'slfks a publié une nouvelle offre : \"qsdrftgyhuj\"', 'offre', 'lu', '2026-06-01 11:49:53', 4),
+(100, NULL, 23, 'Nouvelle opportunité de stage !', 'slfks a publié une nouvelle offre : \"qsdrftgyhuj\"', 'offre', 'lu', '2026-06-01 11:49:53', 5),
+(101, NULL, 23, 'Nouvelle opportunité de stage !', 'slfks a publié une nouvelle offre : \"qsdrftgyhuj\"', 'offre', 'lu', '2026-06-01 11:49:53', 6),
+(102, NULL, 23, 'Nouvelle opportunité de stage !', 'slfks a publié une nouvelle offre : \"qsdrftgyhuj\"', 'offre', 'lu', '2026-06-01 11:49:53', 3),
+(103, NULL, 23, 'Nouvelle candidature reçue', 'Makossa Makos a postulé pour le poste : qsdrftgyhuj', 'candidature', 'lu', '2026-06-01 11:54:01', 1),
+(104, NULL, 23, 'Nouvelle candidature reçue', 'Diakité  Kadiatou  a postulé pour le poste : qsdrftgyhuj', 'candidature', 'lu', '2026-06-01 11:55:19', 2),
+(105, NULL, 23, 'Nouvelle candidature reçue', 'Barry  Oumou a postulé pour le poste : qsdrftgyhuj', 'candidature', 'lu', '2026-06-01 12:16:57', 3),
+(106, 4, NULL, 'Nouvelle candidature reçue', 'Bah Tima a postulé pour le poste : dsjgdfeyrrr', 'candidature', 'lu', '2026-06-01 12:50:56', 6),
+(107, NULL, 23, 'Nouvelle candidature reçue', 'Bah Tima a postulé pour le poste : qsdrftgyhuj', 'candidature', 'lu', '2026-06-01 12:51:46', 6),
+(108, NULL, 23, 'Candidature consultée', 'Votre candidature pour \"okbarry\" a été vue par slfks.', 'candidature', 'lu', '2026-06-04 02:07:29', 2),
+(109, 4, NULL, 'Nouvelle demande de partenariat', 'L\'entreprise sdf a soumis une demande de partenariat.', 'partenariat', 'lu', '2026-06-04 05:02:44', NULL),
+(110, 5, NULL, 'Nouveau stage à l\'université 💼', 'Votre université a publié un nouveau stage : \"lsdk\"', 'offre', 'lu', '2026-06-04 12:29:32', 1),
+(111, 5, NULL, 'Nouveau stage à l\'université 💼', 'Votre université a publié un nouveau stage : \"lsdk\"', 'offre', 'lu', '2026-06-04 12:29:32', 2),
+(112, 5, NULL, 'Nouveau stage à l\'université 💼', 'Votre université a publié un nouveau stage : \"lsdk\"', 'offre', 'lu', '2026-06-04 12:29:32', 4),
+(113, 5, NULL, 'Nouveau stage à l\'université 💼', 'Votre université a publié un nouveau stage : \"lsdk\"', 'offre', 'lu', '2026-06-04 12:29:32', 5),
+(114, 5, NULL, 'Nouveau stage à l\'université 💼', 'Votre université a publié un nouveau stage : \"lsdk\"', 'offre', 'lu', '2026-06-04 12:29:32', 6),
+(115, 5, NULL, 'Nouveau stage à l\'université 💼', 'Votre université a publié un nouveau stage : \"lsdk\"', 'offre', 'lu', '2026-06-04 12:29:32', 7),
+(116, 5, NULL, 'Nouveau stage à l\'université 💼', 'Votre université a publié un nouveau stage : \"lsdk\"', 'offre', 'lu', '2026-06-04 12:29:32', 8),
+(117, 5, NULL, 'Nouveau stage à l\'université 💼', 'Votre université a publié un nouveau stage : \"lsdk\"', 'offre', 'lu', '2026-06-04 12:29:32', 9),
+(118, 5, NULL, 'Nouveau stage à l\'université 💼', 'Votre université a publié un nouveau stage : \"lsdk\"', 'offre', 'lu', '2026-06-04 12:29:32', 3),
+(119, 5, 24, 'Nouveau message reçu', 'UNC - Université Nongo Conakry vous a envoyé un message : \"salut\"', 'message', 'lu', '2026-06-04 13:13:10', NULL),
+(120, 4, 24, 'Nouveau message reçu', 'Super Admin vous a envoyé un message : \"salut cest comment\"', 'message', 'lu', '2026-06-04 13:17:44', NULL),
+(121, 4, NULL, 'Nouveau stage à l\'université 💼', 'Votre université a publié un nouveau stage : \"qslkjfh\"', 'offre', 'lu', '2026-06-04 13:21:56', 1),
+(122, 4, NULL, 'Nouveau stage à l\'université 💼', 'Votre université a publié un nouveau stage : \"qslkjfh\"', 'offre', 'lu', '2026-06-04 13:21:56', 2),
+(123, 4, NULL, 'Nouveau stage à l\'université 💼', 'Votre université a publié un nouveau stage : \"qslkjfh\"', 'offre', 'lu', '2026-06-04 13:21:56', 4),
+(124, 4, NULL, 'Nouveau stage à l\'université 💼', 'Votre université a publié un nouveau stage : \"qslkjfh\"', 'offre', 'lu', '2026-06-04 13:21:56', 5),
+(125, 4, NULL, 'Nouveau stage à l\'université 💼', 'Votre université a publié un nouveau stage : \"qslkjfh\"', 'offre', 'lu', '2026-06-04 13:21:56', 6),
+(126, 4, NULL, 'Nouveau stage à l\'université 💼', 'Votre université a publié un nouveau stage : \"qslkjfh\"', 'offre', 'lu', '2026-06-04 13:21:56', 7),
+(127, 4, NULL, 'Nouveau stage à l\'université 💼', 'Votre université a publié un nouveau stage : \"qslkjfh\"', 'offre', 'lu', '2026-06-04 13:21:56', 8),
+(128, 4, NULL, 'Nouveau stage à l\'université 💼', 'Votre université a publié un nouveau stage : \"qslkjfh\"', 'offre', 'lu', '2026-06-04 13:21:56', 9),
+(129, 4, NULL, 'Nouveau stage à l\'université 💼', 'Votre université a publié un nouveau stage : \"qslkjfh\"', 'offre', 'lu', '2026-06-04 13:21:56', 3),
+(130, 4, NULL, 'Nouvelle demande de partenariat', 'L\'entreprise bintatech a soumis une demande de partenariat.', 'partenariat', 'lu', '2026-06-04 13:27:36', NULL),
+(131, NULL, 23, 'Candidature consultée', 'Votre candidature pour \"qsdrftgyhuj\" a été vue par slfks.', 'candidature', 'non_lu', '2026-06-07 12:36:40', 6);
 
 -- --------------------------------------------------------
 
@@ -526,7 +643,7 @@ CREATE TABLE IF NOT EXISTS `offre_stage` (
   PRIMARY KEY (`id`),
   KEY `id_entreprise` (`id_entreprise`),
   KEY `id_universite` (`id_universite`)
-) ENGINE=InnoDB AUTO_INCREMENT=39 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=46 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
 -- Déchargement des données de la table `offre_stage`
@@ -551,7 +668,14 @@ INSERT INTO `offre_stage` (`id`, `titre`, `description`, `duree`, `date_debut`, 
 (35, 'QSDFQSDF', 'DSFQSDFQSDF', '4', '2026-05-22', '2026-05-31', 'fichier-1778951159714-270819047.png', 23, 32, NULL, '2026-05-16 17:05:59', 'Ouverte', 0),
 (36, 'qsrfergr', 'azet\'dfgtreqs', '3', '2026-05-16', '2026-05-21', 'fichier-1778953778161-542634337.png', 23, 23, NULL, '2026-05-16 17:49:38', 'Ouverte', 0),
 (37, 'sdtqretzdfzeryud', 'ezuirtirezrueuuvf', '3', '2026-05-17', '2026-05-27', 'fichier-1779022221718-231489650.png', 23, 2, NULL, '2026-05-17 12:50:21', 'Ouverte', 0),
-(38, 'hx\'ryhyh\'fzs', 'j,tuykuuuuuuuuuuuuus', '4', '2026-05-17', '2026-05-31', 'fichier-1779025569421-573861935.png', 23, 8, NULL, '2026-05-17 13:46:09', 'Ouverte', 0);
+(38, 'hx\'ryhyh\'fzs', 'j,tuykuuuuuuuuuuuuus', '4', '2026-05-17', '2026-05-31', 'fichier-1779025569421-573861935.png', 23, 8, NULL, '2026-05-17 13:46:09', 'Ouverte', 0),
+(39, 'xrtejyetzeqqeqj', 'iuvytyeyrxaqsdfjg', '5', '2026-05-18', '2026-05-27', 'fichier-1779136880233-923577717.png', 23, 2, NULL, '2026-05-18 20:41:20', 'Ouverte', 0),
+(40, 'dsjgdfeyrrr', 'euyreyffgeyurtezui', '3', '2026-05-22', '2026-05-30', 'fichier-1779476140037-647652040.png', NULL, 2, 4, '2026-05-22 18:55:40', 'Ouverte', 0),
+(41, 'JHJDSTYEYQTERY', 'URIYTRIUOEYOZTEO', '5', '2026-05-22', '2026-05-30', 'fichier-1779476674919-369739595.png', NULL, 10, 4, '2026-05-22 19:04:34', 'Ouverte', 0),
+(42, 'UIESTRCETZIFFIYVYERU', 'IREZYRZBEZZZZZZZZZZIMI', '7', '2026-05-22', '2026-05-31', 'fichier-1779476716661-490477678.png', NULL, 4, 4, '2026-05-22 19:05:16', 'Ouverte', 0),
+(43, 'qsdrftgyhuj', 'sxdrcfvgbhnjiyfreftgyuh', '3', '2026-06-01', '2026-06-26', 'fichier-1780314592892-54835268.png', 23, 5, NULL, '2026-06-01 11:49:52', 'Ouverte', 0),
+(44, 'lsdk', 'dsdsdkjlghriuvndlkj', '6', '2026-06-05', '2026-06-12', 'fichier-1780576172723-798605486.png', NULL, 30, 5, '2026-06-04 12:29:32', 'Ouverte', 0),
+(45, 'qslkjfh', 'lkjfjdsiuljlwxchliufjs', '3', '2026-06-04', '2026-06-05', 'fichier-1780579316653-498813297.png', NULL, 39, 4, '2026-06-04 13:21:56', 'Ouverte', 0);
 
 -- --------------------------------------------------------
 
@@ -583,7 +707,15 @@ CREATE TABLE IF NOT EXISTS `rapport` (
   KEY `fk_rapport_etudiant` (`id_etudiant`),
   KEY `fk_rapport_entreprise` (`id_entreprise`),
   KEY `fk_rapport_offre` (`id_offre_stage`)
-) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=MyISAM AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+--
+-- Déchargement des données de la table `rapport`
+--
+
+INSERT INTO `rapport` (`id`, `id_etudiant`, `id_entreprise`, `id_universite`, `id_offre_stage`, `titre`, `description`, `fichier_rapport`, `encadreur_entreprise`, `encadreur_universite`, `date_debut_stage`, `date_fin_stage`, `date_soumission`, `statut`, `commentaire_validation`, `note`, `created_at`, `updated_at`) VALUES
+(1, 2, 23, NULL, 15, 'Jdhdjejjejj', 'Bejjeskke', 'uploads\\rapports\\rapport_1779035952260.pdf', 'Ejjehshh', 'Djjjdbbj', '2026-05-04', '2026-05-07', '2026-05-17 16:18:26', 'valide', '', NULL, '2026-05-17 16:18:26', '2026-05-17 16:39:36'),
+(2, 2, 23, NULL, 15, 'Dnjduue', 'Jejjjzu2wjwjwjwwjwj', 'uploads\\rapports\\rapport_1779039859836.pdf', 'Nenn', 'Njekhxhw', '2026-05-04', '2026-05-07', '2026-05-17 17:05:09', 'valide', 'kfhyuegyrut', NULL, '2026-05-17 17:05:09', '2026-05-17 17:44:49');
 
 -- --------------------------------------------------------
 
@@ -612,13 +744,7 @@ CREATE TABLE IF NOT EXISTS `universite` (
 
 INSERT INTO `universite` (`id`, `nom`, `prenom`, `telephone`, `email`, `mot_de_passe`, `created_at`, `role`, `logo`) VALUES
 (4, 'Super Admin', 'Admin', NULL, 'superadmin@example.com', 'Admin123', '2026-04-30 16:02:09', 'super_admin', NULL),
-(5, 'UNC - Université Gamal Abdel Nasser de Conakry', 'Admin', NULL, 'unc@gmail.com', '123', '2026-05-05 08:27:52', 'university_admin', NULL),
-(7, 'admain', 'actu', '622222222', 'actu@gmail.com', 'gtss962s', '2026-05-08 18:48:22', 'university_admin', NULL),
-(8, 'sd', 'sdf', '622222222', 'act@gmail.com', '2xxrpr65', '2026-05-08 18:49:49', 'university_admin', NULL),
-(9, 'SDF', 'DFGSDF', '0627328809', 'atu@gmail.com', 'gdfoutxu', '2026-05-08 18:52:01', 'university_admin', NULL),
-(10, 'RTY', 'DFGH', '0627328809', 'dfghj@gmail.com', 'lla2yrek', '2026-05-08 19:01:31', 'university_admin', NULL),
-(13, 'jflkjl', 'fdws', '0627328809', 'edcdfu@gmail.com', 'tgxors38', '2026-05-08 19:16:26', 'university_admin', NULL),
-(14, 'jflkjl', 'fdws', '0627328809', 'edcjjdfu@gmail.com', 'dacbb7jc', '2026-05-08 19:21:46', 'university_admin', NULL);
+(5, 'UNC - Université Nongo Conakry', 'Admin', NULL, 'unc@gmail.com', '123', '2026-05-05 08:27:52', 'university_admin', NULL);
 
 --
 -- Contraintes pour les tables déchargées

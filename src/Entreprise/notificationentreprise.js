@@ -10,11 +10,21 @@ router.get('/unread-count', verifyToken, async (req, res) => {
 
     try {
         const field = userRole === 'universite' ? 'id_universite' : 'id_entreprise';
-        const createdByField = userRole === 'universite' ? 'universite' : 'entreprise';
-        const [rows] = await pool.query(
-            `SELECT COUNT(*) as count FROM notification WHERE ${field} = ? AND statut = 'non_lu' AND (created_by IS NULL OR created_by != ?)`,
-            [userId, createdByField]
-        );
+        // Base: notifications for this entity
+        let sql = `SELECT COUNT(*) as count FROM notification WHERE ${field} = ? AND statut = 'non_lu'`;
+        const params = [userId];
+        if (userRole === 'entreprise') {
+            sql += ` AND NOT (type = 'offre' AND id_etudiant IS NOT NULL AND id_entreprise = ?)`;
+            params.push(userId);
+            sql += ` AND (created_by IS NULL OR created_by != 'entreprise')`;
+            sql += ` AND (created_by_type IS NULL OR created_by_type != 'entreprise')`;
+            sql += ` AND (target IS NULL OR target NOT IN ('etudiant', 'universite', 'all_students', 'all_universities'))`;
+        } else if (userRole === 'universite') {
+            sql += ` AND (created_by IS NULL OR created_by != 'universite')`;
+            sql += ` AND (created_by_type IS NULL OR created_by_type != 'universite')`;
+            sql += ` AND (target IS NULL OR target NOT IN ('etudiant', 'entreprise', 'all_students', 'all_companies'))`;
+        }
+        const [rows] = await pool.query(sql, params);
         res.json({ success: true, count: rows[0].count });
     } catch (error) {
         console.error('💥 Erreur unread-count notifications:', error.message);
@@ -28,19 +38,28 @@ router.get('/', verifyToken, async (req, res) => {
     const userRole = req.user.role;
 
     const field = userRole === 'universite' ? 'n.id_universite' : 'n.id_entreprise';
-    const createdByField = userRole === 'universite' ? 'universite' : 'entreprise';
     try {
-        const [rows] = await pool.query(
-            `SELECT n.*, u.nom AS universite_nom, e.nom AS entreprise_nom,
+        let sql = `SELECT n.*, u.nom AS universite_nom, e.nom AS entreprise_nom,
                     CONCAT(et.nom, ' ', et.prenom) AS etudiant_nom
              FROM notification n
              LEFT JOIN universite u ON n.id_universite = u.id
              LEFT JOIN entreprise e ON n.id_entreprise = e.id
              LEFT JOIN etudiant et ON n.id_etudiant = et.id
-             WHERE ${field} = ? AND (n.created_by IS NULL OR n.created_by != ?)
-             ORDER BY n.created_at DESC`,
-            [userId, createdByField]
-        );
+             WHERE ${field} = ?`;
+        const params = [userId];
+        if (userRole === 'entreprise') {
+            sql += ` AND NOT (n.type = 'offre' AND n.id_etudiant IS NOT NULL AND n.id_entreprise = ?)`;
+            params.push(userId);
+            sql += ` AND (n.created_by IS NULL OR n.created_by != 'entreprise')`;
+            sql += ` AND (n.created_by_type IS NULL OR n.created_by_type != 'entreprise')`;
+            sql += ` AND (n.target IS NULL OR n.target NOT IN ('etudiant', 'universite', 'all_students', 'all_universities'))`;
+        } else if (userRole === 'universite') {
+            sql += ` AND (n.created_by IS NULL OR n.created_by != 'universite')`;
+            sql += ` AND (n.created_by_type IS NULL OR n.created_by_type != 'universite')`;
+            sql += ` AND (n.target IS NULL OR n.target NOT IN ('etudiant', 'entreprise', 'all_students', 'all_companies'))`;
+        }
+        sql += ' ORDER BY n.created_at DESC';
+        const [rows] = await pool.query(sql, params);
         res.json({ success: true, data: rows });
     } catch (error) {
         console.error('💥 Erreur récupération notifications:', error.message);
@@ -101,10 +120,20 @@ router.put('/marquer-tout-lu', verifyToken, async (req, res) => {
 
     try {
         const field = userRole === 'universite' ? 'id_universite' : 'id_entreprise';
-        await pool.query(
-            `UPDATE notification SET statut = 'lu' WHERE ${field} = ? AND statut = 'non_lu'`,
-            [userId]
-        );
+        let sql = `UPDATE notification SET statut = 'lu' WHERE ${field} = ? AND statut = 'non_lu'`;
+        const params = [userId];
+        if (userRole === 'entreprise') {
+            sql += ` AND NOT (type = 'offre' AND id_etudiant IS NOT NULL AND id_entreprise = ?)`;
+            params.push(userId);
+            sql += ` AND (created_by IS NULL OR created_by != 'entreprise')`;
+            sql += ` AND (created_by_type IS NULL OR created_by_type != 'entreprise')`;
+            sql += ` AND (target IS NULL OR target NOT IN ('etudiant', 'universite', 'all_students', 'all_universities'))`;
+        } else if (userRole === 'universite') {
+            sql += ` AND (created_by IS NULL OR created_by != 'universite')`;
+            sql += ` AND (created_by_type IS NULL OR created_by_type != 'universite')`;
+            sql += ` AND (target IS NULL OR target NOT IN ('etudiant', 'entreprise', 'all_students', 'all_companies'))`;
+        }
+        await pool.query(sql, params);
         res.json({ success: true, message: 'Toutes les notifications ont été marquées comme lues' });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });

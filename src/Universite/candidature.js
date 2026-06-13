@@ -248,20 +248,16 @@ router.get('/analyse', verifyToken, async (req, res) => {
         SUM(CASE WHEN c.statut IN ('En attente', 'Vue') THEN 1 ELSE 0 END) as en_attente,
         SUM(CASE WHEN c.statut = 'Refusée' THEN 1 ELSE 0 END) as refuses
       FROM candidature c
-      JOIN offre_stage o ON c.id_offre_stage = o.id
-      WHERE o.id_universite = ?
-    `, [universiteId]);
+    `);
 
     const [candidaturesParMois] = await pool.query(`
       SELECT
         DATE_FORMAT(c.date_candidature, '%b') as mois,
         COUNT(*) as total
       FROM candidature c
-      JOIN offre_stage o ON c.id_offre_stage = o.id
-      WHERE o.id_universite = ?
       GROUP BY mois
       ORDER BY FIELD(mois, 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec')
-    `, [universiteId]);
+    `);
 
     const [topOffres] = await pool.query(`
       SELECT
@@ -269,11 +265,10 @@ router.get('/analyse', verifyToken, async (req, res) => {
         COUNT(c.id) as total
       FROM offre_stage o
       LEFT JOIN candidature c ON o.id = c.id_offre_stage
-      WHERE o.id_universite = ?
       GROUP BY o.id
       ORDER BY total DESC
       LIMIT 5
-    `, [universiteId]);
+    `);
 
     const [domaines] = await pool.query(`
       SELECT
@@ -281,9 +276,8 @@ router.get('/analyse', verifyToken, async (req, res) => {
         COUNT(o.id) as total_offres
       FROM domaine d
       JOIN offre_stage o ON d.id = o.id_domaine
-      WHERE o.id_universite = ?
       GROUP BY d.id
-    `, [universiteId]);
+    `);
 
     res.json({
       success: true,

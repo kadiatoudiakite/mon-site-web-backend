@@ -8,7 +8,11 @@ router.get('/unread-count', verifyToken, async (req, res) => {
     const universiteId = req.user.id;
     try {
         const [rows] = await pool.query(
-            'SELECT COUNT(*) as count FROM notification WHERE id_universite = ? AND statut = "non_lu"',
+            `SELECT COUNT(*) as count FROM notification 
+             WHERE id_universite = ? AND statut = "non_lu" 
+             AND (created_by IS NULL OR created_by != 'universite')
+             AND (created_by_type IS NULL OR created_by_type != 'universite')
+             AND (target IS NULL OR target NOT IN ('etudiant', 'entreprise', 'all_students', 'all_companies'))`,
             [universiteId]
         );
         res.json({ success: true, count: rows[0].count });
@@ -26,7 +30,10 @@ router.get('/', verifyToken, async (req, res) => {
              FROM notification n
              LEFT JOIN entreprise e ON n.id_entreprise = e.id
              LEFT JOIN etudiant et ON n.id_etudiant = et.id
-             WHERE n.id_universite = ?
+             WHERE n.id_universite = ? 
+             AND (n.created_by IS NULL OR n.created_by != 'universite')
+             AND (n.created_by_type IS NULL OR n.created_by_type != 'universite')
+             AND (n.target IS NULL OR n.target NOT IN ('etudiant', 'entreprise', 'all_students', 'all_companies'))
              ORDER BY n.created_at DESC`,
             [universiteId]
         );
@@ -62,7 +69,11 @@ router.put('/marquer-tout-lu', verifyToken, async (req, res) => {
     const universiteId = req.user.id;
     try {
         await pool.query(
-            `UPDATE notification SET statut = 'lu' WHERE id_universite = ? AND statut = 'non_lu'`,
+            `UPDATE notification SET statut = 'lu' 
+             WHERE id_universite = ? AND statut = 'non_lu' 
+             AND (created_by IS NULL OR created_by != 'universite')
+             AND (created_by_type IS NULL OR created_by_type != 'universite')
+             AND (target IS NULL OR target NOT IN ('etudiant', 'entreprise', 'all_students', 'all_companies'))`,
             [universiteId]
         );
         res.json({ success: true, message: 'Toutes les notifications ont été marquées comme lues' });
